@@ -78,7 +78,7 @@ export const HomePage: React.FC = () => {
     try {
       const payload: AnalyzePayload = { transcripts, sops };
       const data = await analyzeTranscriptsService(payload);
-      setResults(data.sops || []);
+      setResults(data.results || []);
     } catch (err) {
       const apiErr = err as ApiError;
       console.error("Analysis error:", apiErr);

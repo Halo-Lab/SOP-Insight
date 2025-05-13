@@ -16,10 +16,8 @@ export interface SopFormData {
 }
 
 export interface AnalysisResult {
-  // Define the structure of your analysis results
-  // This is just a placeholder, adjust to your actual data
-  sops: Array<{
-    sop: string; // or Sop object if the backend returns it
+  results: Array<{
+    sop: string;
     analyses: Array<{
       transcript: string;
       result: string;
