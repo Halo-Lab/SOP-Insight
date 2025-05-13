@@ -34,6 +34,7 @@ export const HomePage: React.FC = () => {
   const [error, setError] = React.useState<string | null>(null);
   const [sopDialogIdx, setSopDialogIdx] = React.useState<number | null>(null);
   const { logout } = useAuth();
+  const resultsHeaderRef = React.useRef<HTMLHeadingElement | null>(null);
 
   const handleTranscriptChange = (index: number, value: string) => {
     setTranscripts((prev) => prev.map((t, i) => (i === index ? value : t)));
@@ -118,6 +119,12 @@ export const HomePage: React.FC = () => {
       />
     ),
   }));
+
+  React.useEffect(() => {
+    if (results.length > 0 && resultsHeaderRef.current) {
+      resultsHeaderRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [results]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -262,7 +269,10 @@ export const HomePage: React.FC = () => {
 
         {results.length > 0 && (
           <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-4 text-center">
+            <h2
+              ref={resultsHeaderRef}
+              className="text-xl font-semibold mb-4 text-center"
+            >
               Analysis Results
             </h2>
             <div className="bg-white rounded-lg shadow-sm p-6">
