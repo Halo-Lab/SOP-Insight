@@ -4,6 +4,8 @@ import AuthPage from "@/pages/AuthPage";
 import HomePage from "@/pages/HomePage";
 import { useAuth } from "@/lib/context/AuthContext";
 import { AuthProvider } from "@/lib/context/AuthContext";
+import { EmailConfirmationPage } from "@/pages/EmailConfirmationPage";
+import { Toaster } from "@/components/sonner";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -47,6 +49,7 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      <Route path="/email-confirmation" element={<EmailConfirmationPage />} />
       <Route path="*" element={<Navigate to="/auth" replace />} />
     </Routes>
   );
@@ -57,6 +60,7 @@ const App: React.FC = () => {
     <BrowserRouter>
       <AuthProvider>
         <AppRoutes />
+        <Toaster richColors position="top-right" />
       </AuthProvider>
     </BrowserRouter>
   );

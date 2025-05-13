@@ -2,6 +2,7 @@ import * as React from "react";
 import { TextField } from "@/components/TextField";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/lib/context/AuthContext";
+import { toast } from "sonner";
 
 const validateEmail = (email: string) => /.+@.+\..+/.test(email);
 
@@ -26,6 +27,7 @@ export const RegistrationPage: React.FC<{ onSwitchToLogin?: () => void }> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setApiError("");
+
     const newErrors: {
       email?: string;
       password?: string;
@@ -40,16 +42,33 @@ export const RegistrationPage: React.FC<{ onSwitchToLogin?: () => void }> = ({
     else if (password !== confirmPassword)
       newErrors.confirmPassword = "Passwords do not match";
     setErrors(newErrors);
+
     if (Object.keys(newErrors).length === 0) {
       setLoading(true);
       try {
-        await register(email, password);
-        setEmail("");
-        setPassword("");
-        setConfirmPassword("");
+        const result = await register(email, password);
+
+        if (!result.session || !result.session.access_token) {
+          toast.success("Registration successful!", {
+            description:
+              "A confirmation email has been sent to your address. Please check your inbox.",
+            duration: 5000,
+          });
+          setEmail("");
+          setPassword("");
+          setConfirmPassword("");
+        } else {
+          // If session exists (auto-confirmation or already confirmed), AuthContext will redirect
+          // No specific message needed here as redirection will happen
+        }
       } catch (err) {
         console.error(err);
-        setApiError(err instanceof Error ? err.message : "Registration error");
+        const errorMessage =
+          err instanceof Error ? err.message : "Registration error";
+        setApiError(errorMessage);
+        toast.error("Registration Failed", {
+          description: errorMessage,
+        });
       } finally {
         setLoading(false);
       }
@@ -64,6 +83,16 @@ export const RegistrationPage: React.FC<{ onSwitchToLogin?: () => void }> = ({
         aria-label="Registration form"
       >
         <h1 className="text-2xl font-bold text-center mb-2">Sign Up</h1>
+
+        {apiError && !loading && (
+          <div
+            className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg"
+            role="alert"
+          >
+            {apiError}
+          </div>
+        )}
+
         <TextField
           label="Email"
           name="email"
@@ -108,9 +137,6 @@ export const RegistrationPage: React.FC<{ onSwitchToLogin?: () => void }> = ({
           placeholder="Re-enter your password"
           ariaLabel="Confirm password"
         />
-        {apiError && (
-          <div className="text-red-500 text-sm text-center">{apiError}</div>
-        )}
         <Button
           type="submit"
           loading={loading}

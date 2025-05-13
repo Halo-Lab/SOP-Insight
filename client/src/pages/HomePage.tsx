@@ -11,24 +11,27 @@ import {
   DialogTrigger,
   DialogTitle,
 } from "@/components/Dialog";
+import { analyzeTranscripts as analyzeTranscriptsService } from "@/lib/services/sop.service";
+import type { AnalyzePayload } from "@/lib/services/sop.service";
+import type { ApiError } from "@/lib/services/api.service";
 
-interface Analysis {
+interface SingleAnalysis {
   transcript: string;
   result: string;
   tokens: number;
 }
 
-interface SopResult {
+export interface SopAnalysisResult {
   sop: string;
-  analyses: Analysis[];
+  analyses: SingleAnalysis[];
 }
 
 export const HomePage: React.FC = () => {
   const [transcripts, setTranscripts] = React.useState<string[]>([""]);
   const [sops, setSops] = React.useState<string[]>([""]);
-  const [results, setResults] = React.useState<SopResult[]>([]);
+  const [results, setResults] = React.useState<SopAnalysisResult[]>([]);
   const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
   const [sopDialogIdx, setSopDialogIdx] = React.useState<number | null>(null);
   const { logout } = useAuth();
 
@@ -61,7 +64,7 @@ export const HomePage: React.FC = () => {
   };
 
   const handleAnalyze = async () => {
-    setError("");
+    setError(null);
     setResults([]);
     if (transcripts.length === 0 || transcripts.some((t) => !t.trim())) {
       setError("At least one transcript is required and cannot be empty.");
@@ -73,24 +76,15 @@ export const HomePage: React.FC = () => {
     }
     setLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/analyze`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({ transcripts, sops }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        setError(data.error || "Analysis error");
-      } else {
-        setResults(data.results || []);
-      }
+      const payload: AnalyzePayload = { transcripts, sops };
+      const data = await analyzeTranscriptsService(payload);
+      setResults(data.sops || []);
     } catch (err) {
-      console.error(err);
-      setError("Network error");
+      const apiErr = err as ApiError;
+      console.error("Analysis error:", apiErr);
+      setError(
+        apiErr.message || "Analysis failed due to a network or server error."
+      );
     } finally {
       setLoading(false);
     }
@@ -248,13 +242,19 @@ export const HomePage: React.FC = () => {
 
         <div className="mt-8">
           {error && (
-            <div className="text-red-500 text-sm text-center mb-4">{error}</div>
+            <div
+              className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg text-center"
+              role="alert"
+            >
+              {error}
+            </div>
           )}
           <Button
             onClick={handleAnalyze}
             loading={loading}
             ariaLabel="Analyze transcripts"
             tabIndex={0}
+            className="w-full sm:w-auto"
           >
             Analyze
           </Button>

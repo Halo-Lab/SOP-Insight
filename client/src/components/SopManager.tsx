@@ -1,245 +1,207 @@
 import * as React from "react";
 import { Button } from "./Button";
-import { TextArea } from "./TextArea";
-import { TextField } from "./TextField";
+import { SopForm } from "./SopForm";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/Dialog";
-
-interface Sop {
-  id: number;
-  name: string;
-  content: string;
-}
+  fetchSops as fetchSopsService,
+  createSop as createSopService,
+  updateSop as updateSopService,
+  deleteSop as deleteSopService,
+} from "@/lib/services/sop.service";
+import type { Sop as SopType, SopFormData } from "@/lib/services/sop.service";
+import type { ApiError } from "@/lib/services/api.service";
 
 interface SopManagerProps {
   onSelectSop: (content: string) => void;
 }
 
 export const SopManager: React.FC<SopManagerProps> = ({ onSelectSop }) => {
-  const [sops, setSops] = React.useState<Sop[]>([]);
-  const [error, setError] = React.useState("");
-  const [viewSop, setViewSop] = React.useState<Sop | null>(null);
+  const [sops, setSops] = React.useState<SopType[]>([]);
+  const [error, setError] = React.useState<string | null>(null);
   const [isAdding, setIsAdding] = React.useState(false);
-  const [isEditing, setIsEditing] = React.useState<number | null>(null);
-  const [form, setForm] = React.useState({ name: "", content: "" });
+  const [isEditing, setIsEditing] = React.useState<string | null>(null);
+  const [editingSopData, setEditingSopData] = React.useState<SopFormData>({
+    name: "",
+    content: "",
+  });
   const [loading, setLoading] = React.useState(false);
+  const [formLoading, setFormLoading] = React.useState(false);
 
-  const fetchSops = async () => {
+  const loadSops = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/sop`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await fetchSopsService();
       setSops(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch SOPs");
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "Failed to fetch SOPs");
     } finally {
       setLoading(false);
     }
   };
 
   React.useEffect(() => {
-    fetchSops();
+    loadSops();
   }, []);
 
-  const handleAdd = async () => {
+  const handleAddSubmit = async (formData: SopFormData) => {
+    setFormLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/sop`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setSops([data, ...sops]);
-      setForm({ name: "", content: "" });
+      const newSop = await createSopService(formData);
+      setSops([newSop, ...sops]);
       setIsAdding(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add SOP");
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "Failed to add SOP");
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
-  const handleEdit = (sop: Sop) => {
+  const handleEditClick = (sop: SopType) => {
     setIsEditing(sop.id);
-    setForm({ name: sop.name, content: sop.content });
+    setEditingSopData({ name: sop.name, content: sop.content });
+    setIsAdding(false);
   };
 
-  const handleUpdate = async () => {
+  const handleUpdateSubmit = async (formData: SopFormData) => {
     if (isEditing === null) return;
+    setFormLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/sop/${isEditing}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify(form),
-        }
+      const updatedSop = await updateSopService(isEditing, formData);
+      setSops(
+        sops.map((sopItem) => (sopItem.id === isEditing ? updatedSop : sopItem))
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setSops(sops.map((sop) => (sop.id === isEditing ? data : sop)));
       setIsEditing(null);
-      setForm({ name: "", content: "" });
+      setEditingSopData({ name: "", content: "" });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update SOP");
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "Failed to update SOP");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this SOP?")) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await deleteSopService(id);
+      setSops(sops.filter((sopItem) => sopItem.id !== id));
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "Failed to delete SOP");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this SOP?")) return;
-    try {
-      setLoading(true);
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/sop/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error);
-      }
-      setSops(sops.filter((sop) => sop.id !== id));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete SOP");
-    } finally {
-      setLoading(false);
-    }
+  const openAddForm = () => {
+    setIsAdding(true);
+    setIsEditing(null);
+    setEditingSopData({ name: "", content: "" });
+    setError(null);
+  };
+
+  const cancelAddForm = () => {
+    setIsAdding(false);
+    setError(null);
+  };
+
+  const cancelEditForm = () => {
+    setIsEditing(null);
+    setEditingSopData({ name: "", content: "" });
+    setError(null);
   };
 
   return (
     <div className="space-y-4">
-      {error && <div className="text-red-500 text-sm">{error}</div>}
+      {error && (
+        <div
+          className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
       <div className="flex justify-between items-center mb-2">
         <div className="font-semibold">SOPs</div>
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => {
-            setIsAdding(true);
-            setIsEditing(null);
-            setForm({ name: "", content: "" });
-          }}
+          onClick={openAddForm}
+          disabled={isAdding || isEditing !== null}
         >
           + Add SOP
         </Button>
       </div>
       {isAdding && (
-        <div className="border rounded p-3 bg-gray-50 space-y-2">
-          <TextField
-            label="Name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Enter SOP name..."
-          />
-          <TextArea
-            label="Content"
-            value={form.content}
-            onChange={(e) => setForm({ ...form, content: e.target.value })}
-            placeholder="Enter SOP content..."
-            rows={4}
-          />
-          <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setIsAdding(false);
-                setForm({ name: "", content: "" });
-              }}
-            >
-              Cancel
-            </Button>
-            <Button size="sm" onClick={handleAdd} loading={loading}>
-              Save
-            </Button>
-          </div>
-        </div>
+        <SopForm
+          initialData={{ name: "", content: "" }}
+          onSubmit={handleAddSubmit}
+          onCancel={cancelAddForm}
+          isLoading={formLoading}
+          formTitle="Add New SOP"
+          submitButtonText="Save SOP"
+        />
       )}
       {isEditing !== null && (
-        <div className="border rounded p-3 bg-gray-50 space-y-2">
-          <TextField
-            label="Name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Enter SOP name..."
-          />
-          <TextArea
-            label="Content"
-            value={form.content}
-            onChange={(e) => setForm({ ...form, content: e.target.value })}
-            placeholder="Enter SOP content..."
-            rows={4}
-          />
-          <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setIsEditing(null);
-                setForm({ name: "", content: "" });
-              }}
-            >
-              Cancel
-            </Button>
-            <Button size="sm" onClick={handleUpdate} loading={loading}>
-              Update
-            </Button>
-          </div>
+        <SopForm
+          initialData={editingSopData}
+          onSubmit={handleUpdateSubmit}
+          onCancel={cancelEditForm}
+          isLoading={formLoading}
+          formTitle="Edit SOP"
+          submitButtonText="Update SOP"
+        />
+      )}
+      {loading && sops.length === 0 && (
+        <p className="text-center text-gray-500">Loading SOPs...</p>
+      )}
+      {!loading && sops.length === 0 && !isAdding && isEditing === null && (
+        <div className="text-center text-gray-500 py-8">
+          No SOPs found. Click "+ Add SOP" to create one.
         </div>
       )}
-      {sops.length === 0 ? (
-        <div className="text-center text-gray-500 py-8">No SOPs found</div>
-      ) : (
-        <div className="space-y-2">
+      {sops.length > 0 && (
+        <div className="space-y-2 pt-2">
           {sops.map((sop) => (
             <div
               key={sop.id}
-              className="rounded border p-3 bg-white hover:bg-gray-50 flex items-center justify-between gap-2 max-w-xl mx-auto"
+              className="rounded border p-3 bg-white hover:bg-gray-50 flex items-center justify-between gap-2 max-w-xl mx-auto shadow-sm transition-all hover:shadow-md"
             >
               <div
-                className="flex-1 min-w-0 cursor-pointer"
+                className="flex-1 min-w-0 cursor-pointer group"
                 onClick={() => onSelectSop(sop.content)}
               >
-                <div className="font-medium truncate">{sop.name}</div>
+                <div className="font-medium truncate group-hover:text-blue-600">
+                  {sop.name}
+                </div>
                 <div className="text-xs text-gray-600 line-clamp-2">
                   {sop.content}
                 </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
-                  aria-label="Edit"
-                  onClick={() => handleEdit(sop)}
+                  aria-label="Edit SOP"
+                  onClick={() => handleEditClick(sop)}
+                  className="text-gray-600 hover:text-blue-600"
+                  disabled={isAdding || isEditing !== null}
                 >
                   ✏️
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  aria-label="Delete"
+                  aria-label="Delete SOP"
                   onClick={() => handleDelete(sop.id)}
+                  className="text-gray-600 hover:text-red-600"
+                  disabled={isAdding || isEditing !== null}
                 >
                   🗑️
                 </Button>
@@ -248,31 +210,6 @@ export const SopManager: React.FC<SopManagerProps> = ({ onSelectSop }) => {
           ))}
         </div>
       )}
-
-      <Dialog open={!!viewSop} onOpenChange={() => setViewSop(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{viewSop?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="whitespace-pre-line text-sm text-gray-800 pt-2">
-            {viewSop?.content}
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (viewSop) onSelectSop(viewSop.content);
-                setViewSop(null);
-              }}
-            >
-              Use this SOP
-            </Button>
-            <Button variant="outline" onClick={() => setViewSop(null)}>
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

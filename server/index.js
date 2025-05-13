@@ -53,17 +53,22 @@ app.post('/auth/signup', async (req, res) => {
       email,
       password,
       options: {
-        emailRedirectTo: null,
-        data: {
-          email_confirmed: true
-        }
+        emailRedirectTo: `${process.env.CLIENT_URL || 'http://localhost:3000'}/email-confirmation`,
       }
     });
 
     if (error) throw error;
 
-    res.json(data);
+    if (!data.user) {
+      throw new Error('Registration failed - no user data returned');
+    }
+
+    res.json({
+      user: data.user,
+      session: data.session
+    });
   } catch (error) {
+    console.error('Signup error:', error);
     res.status(500).json({ error: error.message });
   }
 });

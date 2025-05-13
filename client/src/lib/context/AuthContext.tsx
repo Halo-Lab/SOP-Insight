@@ -1,24 +1,37 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+// Import service functions
+import {
+  loginUser,
+  registerUser,
+  fetchCurrentUser,
+} from "@/lib/services/auth.service";
 
 interface User {
   id: string;
   email: string;
 }
 
-interface RegisterResponse {
+// Adjusted to match the return type of registerUser service function
+interface RegisterServiceResponse {
   user: User;
-  session: {
+  session?: {
+    // Session is optional, especially with email confirmation flow
     access_token: string;
   };
+  message?: string; // For messages like 'check email for confirmation'
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<RegisterResponse>;
+  // Update register to reflect service response and how it's used in RegistrationPage
+  register: (
+    email: string,
+    password: string
+  ) => Promise<RegisterServiceResponse>;
   logout: () => void;
 }
 
@@ -40,17 +53,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Invalid token");
-      }
-
-      const data = await response.json();
+      // Use service function
+      const data = await fetchCurrentUser(token);
       setUser(data.user);
     } catch (error) {
       console.error("Auth check failed:", error);
@@ -63,61 +67,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     checkAuth();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Consider dependencies if navigate or other external factors affect checkAuth
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/auth/login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Login failed");
+      // Use service function
+      const data = await loginUser(email, password);
+      if (data.session?.access_token) {
+        localStorage.setItem("token", data.session.access_token);
+        setUser(data.user);
+        navigate("/");
+      } else {
+        // Handle cases where login might succeed but no token (e.g. MFA step needed - though not in current scope)
+        console.error("Login response did not include a session token.");
+        throw new Error("Login failed: No session token received.");
       }
-
-      const data = await response.json();
-      localStorage.setItem("token", data.session.access_token);
-      setUser(data.user);
-      navigate("/");
     } catch (error) {
       console.error("Login failed:", error);
-      throw error;
+      throw error; // Re-throw for the component to handle (e.g., display error message)
     }
   };
 
-  const register = async (email: string, password: string) => {
+  const register = async (
+    email: string,
+    password: string
+  ): Promise<RegisterServiceResponse> => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/auth/signup`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
-        }
-      );
+      // Use service function
+      const data = await registerUser(email, password);
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Registration failed");
+      // If session exists and has a token (e.g. auto-confirm is on, or user is already confirmed)
+      if (data.session?.access_token) {
+        localStorage.setItem("token", data.session.access_token);
+        setUser(data.user);
+        navigate("/");
       }
-
-      const data = await response.json();
-      localStorage.setItem("token", data.session.access_token);
-      setUser(data.user);
-      navigate("/");
+      // If no session token, it means email confirmation is likely pending.
+      // The service response (data) which includes user and possibly a message will be returned.
+      // The component (RegistrationPage) will handle showing the message.
       return data;
     } catch (error) {
-      console.error("Registration failed:", error);
-      throw error;
+      console.error("Registration failed context:", error);
+      throw error; // Re-throw for the component to handle
     }
   };
 
