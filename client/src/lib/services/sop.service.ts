@@ -31,6 +31,16 @@ export interface AnalyzePayload {
   sops: string[]; // Assuming sops are passed as content strings for analysis
 }
 
+export interface DefaultSop {
+  id: number;
+  role_id: number;
+  name: string;
+  goal: string;
+  content: string;
+  role_name: string;
+  created_at: string;
+}
+
 // SOP API functions
 export const fetchSops = async (): Promise<Sop[]> => {
   return request<Sop[]>("/sop");
@@ -68,4 +78,18 @@ export const analyzeTranscripts = async (
     method: "POST",
     body: JSON.stringify(payload),
   });
+};
+
+export const sopService = {
+  async getDefaultSopsByRole(roleId: number): Promise<DefaultSop[]> {
+    try {
+      const result = await request<DefaultSop[]>(
+        `/default-sops?role_id=${roleId}`
+      );
+      return result;
+    } catch (error) {
+      console.error("Error in getDefaultSopsByRole:", error);
+      throw error;
+    }
+  },
 };

@@ -21,6 +21,7 @@ export interface LoginApiResponse {
 export interface RegisterApiResponse {
   user: ApiUser;
   session?: SupabaseSession | null;
+  message?: string;
 }
 
 export interface FetchMeResponse {

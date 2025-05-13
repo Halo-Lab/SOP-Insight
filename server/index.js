@@ -63,6 +63,10 @@ app.post('/auth/signup', async (req, res) => {
       throw new Error('Registration failed - no user data returned');
     }
 
+    await supabase
+      .from('profiles')
+      .insert([{ id: data.user.id }]);
+
     res.json({
       user: data.user,
       session: data.session
@@ -93,13 +97,15 @@ app.post('/auth/login', async (req, res) => {
 // Add /auth/me endpoint
 app.get('/auth/me', authenticateToken, async (req, res) => {
   try {
-    const { data: { user }, error } = await supabase.auth.getUser(req.headers['authorization'].split(' ')[1]);
-
-    if (error) throw error;
-
-    res.json({ user });
+    const user = req.user;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role_id')
+      .eq('id', user.id)
+      .single();
+    res.json({ user: { ...user, role_id: profile?.role_id || null } });
   } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -243,6 +249,62 @@ app.delete('/sop/:id', authenticateToken, async (req, res) => {
 
     if (error) throw error;
     res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Roles endpoint
+app.get('/roles', authenticateToken, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('roles')
+      .select('*')
+      .order('name');
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching roles:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update user role endpoint
+app.post('/users/role', authenticateToken, async (req, res) => {
+  const { role_id } = req.body;
+
+  if (!role_id) {
+    return res.status(400).json({ error: 'Role ID is required' });
+  }
+
+  try {
+    // Оновлюємо поле role_id у таблиці profiles
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ role_id: Number(role_id) })
+      .eq('id', req.user.id)
+      .select();
+
+    if (error) throw error;
+    res.json(data[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/default-sops', authenticateToken, async (req, res) => {
+  const { role_id } = req.query;
+  if (!role_id) {
+    return res.status(400).json({ error: 'role_id is required' });
+  }
+  try {
+    const { data, error } = await supabase
+      .from('default_sops')
+      .select('*')
+      .eq('role_id', Number(role_id));
+    if (error) throw error;
+    res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

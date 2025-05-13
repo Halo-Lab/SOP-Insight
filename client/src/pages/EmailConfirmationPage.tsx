@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Button } from "@/components/Button";
+import { Button } from "@/components/ui/Button";
 
 export const EmailConfirmationPage: React.FC = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">(

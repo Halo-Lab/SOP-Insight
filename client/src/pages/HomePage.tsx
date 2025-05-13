@@ -1,7 +1,7 @@
 import * as React from "react";
-import { TextArea } from "@/components/TextArea";
-import { Button } from "@/components/Button";
-import { Tabs } from "@/components/Tabs";
+import { TextArea } from "@/components/ui/TextArea";
+import { Button } from "@/components/ui/Button";
+import { Tabs } from "@/components/ui/Tabs";
 import { SopManager } from "@/components/SopManager";
 import ReactMarkdown from "react-markdown";
 import { useAuth } from "@/lib/context/AuthContext";
@@ -10,10 +10,12 @@ import {
   DialogContent,
   DialogTrigger,
   DialogTitle,
-} from "@/components/Dialog";
+} from "@/components/ui/Dialog";
 import { analyzeTranscripts as analyzeTranscriptsService } from "@/lib/services/sop.service";
 import type { AnalyzePayload } from "@/lib/services/sop.service";
 import type { ApiError } from "@/lib/services/api.service";
+import { RoleSelectionModal } from "@/components/RoleSelectionModal";
+import { rolesService } from "@/lib/services/roles.service";
 
 interface SingleAnalysis {
   transcript: string;
@@ -33,8 +35,9 @@ export const HomePage: React.FC = () => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [sopDialogIdx, setSopDialogIdx] = React.useState<number | null>(null);
-  const { logout } = useAuth();
+  const { logout, user, setUser, loading: authLoading } = useAuth();
   const resultsHeaderRef = React.useRef<HTMLHeadingElement | null>(null);
+  const [showRoleModal, setShowRoleModal] = React.useState(false);
 
   const handleTranscriptChange = (index: number, value: string) => {
     setTranscripts((prev) => prev.map((t, i) => (i === index ? value : t)));
@@ -125,6 +128,24 @@ export const HomePage: React.FC = () => {
       resultsHeaderRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [results]);
+
+  React.useEffect(() => {
+    if (!authLoading) {
+      setShowRoleModal(!!user && (!user.role_id || user.role_id === null));
+    }
+  }, [user, authLoading]);
+
+  const handleRoleSelect = async (roleId: string) => {
+    try {
+      await rolesService.updateUserRole(Number(roleId));
+      if (user) {
+        setUser({ ...user, role_id: Number(roleId) });
+      }
+      setShowRoleModal(false);
+    } catch (error) {
+      console.error("Error updating role:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -281,6 +302,11 @@ export const HomePage: React.FC = () => {
           </div>
         )}
       </main>
+      <RoleSelectionModal
+        isOpen={showRoleModal}
+        onClose={() => setShowRoleModal(false)}
+        onRoleSelect={handleRoleSelect}
+      />
     </div>
   );
 };

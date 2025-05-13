@@ -21,10 +21,10 @@ async function seed() {
 
   // 3. Insert SOPs with role_id
   const sopsWithRoleId = sops.map((sop) => ({
-    ...sop,
     role_id: roleNameToId[sop.role_name],
-    steps: JSON.stringify(sop.steps), // Convert steps to JSON string
-    role_name: sop.role_name
+    name: sop.name,
+    goal: sop.goal,
+    content: sop.content
   }));
 
   const { error: sopError } = await supabase.from('default_sops').insert(sopsWithRoleId);

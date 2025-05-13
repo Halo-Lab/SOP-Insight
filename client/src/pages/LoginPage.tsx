@@ -1,6 +1,6 @@
 import * as React from "react";
-import { TextField } from "@/components/TextField";
-import { Button } from "@/components/Button";
+import { TextField } from "@/components/ui/TextField";
+import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/context/AuthContext";
 
 const validateEmail = (email: string) => /.+@.+\..+/.test(email);

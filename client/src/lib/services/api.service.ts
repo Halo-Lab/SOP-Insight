@@ -6,73 +6,41 @@ export interface ApiError {
   originalError?: unknown;
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem("token");
-
-  const headers = new Headers(options.headers || {});
-
-  if (!(options.body instanceof FormData) && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
-
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-
-  if (options.body instanceof FormData) {
-    headers.delete("Content-Type");
-  }
-
-  try {
-    const response = await fetch(`${API_URL}${path}`, { ...options, headers });
-
-    if (
-      response.status === 204 ||
-      (response.ok && response.headers.get("content-length") === "0")
-    ) {
-      return null as T;
-    }
-
-    let data;
-    try {
-      data = await response.json();
-    } catch (jsonError) {
-      if (!response.ok) {
-        throw {
-          message: `API request failed with status ${response.status} (Body not parsable)`,
-          status: response.status,
-          originalError: jsonError,
-        } as ApiError;
-      }
-      console.error(
-        "API call was OK but failed to parse JSON response:",
-        jsonError
-      );
-      throw {
-        message: "Failed to parse server response despite OK status",
-        status: response.status,
-        originalError: jsonError,
-      } as ApiError;
-    }
-
-    if (!response.ok) {
-      throw {
-        message: data?.error || `API request to ${path} failed`,
-        status: response.status,
-        originalError: data,
-      } as ApiError;
-    }
-    return data as T;
-  } catch (error) {
-    console.error(`API request to ${path} failed:`, error);
-    if (typeof error === "object" && error !== null && "message" in error) {
-      throw error;
-    }
-    throw {
-      message: `Network or unexpected error for ${path}`,
-      originalError: error,
-    } as ApiError;
-  }
+interface RequestOptions extends RequestInit {
+  data?: unknown;
 }
 
-export default request;
+export default async function request<T>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<T> {
+  const { data, ...customConfig } = options;
+  const token = localStorage.getItem("token");
+
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...customConfig.headers,
+  };
+
+  const config: RequestInit = {
+    ...customConfig,
+    headers,
+    ...(data ? { body: JSON.stringify(data) } : {}),
+  };
+
+  const response = await fetch(`${API_URL}${endpoint}`, config);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    console.error("Error response:", errorData);
+    throw {
+      message: errorData?.message || `HTTP error! status: ${response.status}`,
+      status: response.status,
+      originalError: errorData,
+    } as ApiError;
+  }
+
+  const responseData = await response.json();
+  return responseData;
+}

@@ -11,28 +11,29 @@ import {
 interface User {
   id: string;
   email: string;
+  role_id?: number | null;
 }
 
-// Adjusted to match the return type of registerUser service function
+interface Session {
+  access_token: string;
+}
+
 interface RegisterServiceResponse {
   user: User;
-  session?: {
-    // Session is optional, especially with email confirmation flow
-    access_token: string;
-  };
-  message?: string; // For messages like 'check email for confirmation'
+  session?: Session | null;
+  message?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  // Update register to reflect service response and how it's used in RegistrationPage
   register: (
     email: string,
     password: string
   ) => Promise<RegisterServiceResponse>;
   logout: () => void;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,7 +54,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     try {
-      // Use service function
       const data = await fetchCurrentUser(token);
       setUser(data.user);
     } catch (error) {
@@ -67,25 +67,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     checkAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Consider dependencies if navigate or other external factors affect checkAuth
+  }, []);
 
   const login = async (email: string, password: string) => {
     try {
-      // Use service function
       const data = await loginUser(email, password);
       if (data.session?.access_token) {
         localStorage.setItem("token", data.session.access_token);
-        setUser(data.user);
+        const me = await fetchCurrentUser(data.session.access_token);
+        setUser(me.user);
         navigate("/");
       } else {
-        // Handle cases where login might succeed but no token (e.g. MFA step needed - though not in current scope)
         console.error("Login response did not include a session token.");
         throw new Error("Login failed: No session token received.");
       }
     } catch (error) {
       console.error("Login failed:", error);
-      throw error; // Re-throw for the component to handle (e.g., display error message)
+      throw error;
     }
   };
 
@@ -94,22 +92,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     password: string
   ): Promise<RegisterServiceResponse> => {
     try {
-      // Use service function
       const data = await registerUser(email, password);
 
-      // If session exists and has a token (e.g. auto-confirm is on, or user is already confirmed)
       if (data.session?.access_token) {
         localStorage.setItem("token", data.session.access_token);
         setUser(data.user);
         navigate("/");
       }
-      // If no session token, it means email confirmation is likely pending.
-      // The service response (data) which includes user and possibly a message will be returned.
-      // The component (RegistrationPage) will handle showing the message.
-      return data;
+
+      return {
+        user: data.user,
+        session: data.session,
+        message: data.message,
+      };
     } catch (error) {
       console.error("Registration failed context:", error);
-      throw error; // Re-throw for the component to handle
+      throw error;
     }
   };
 
@@ -127,6 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         login,
         register,
         logout,
+        setUser,
       }}
     >
       {children}

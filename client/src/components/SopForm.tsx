@@ -1,7 +1,7 @@
 import * as React from "react";
-import { Button } from "./Button";
-import { TextArea } from "./TextArea";
-import { TextField } from "./TextField";
+import { Button } from "@/components/ui/Button";
+import { TextArea } from "@/components/ui/TextArea";
+import { TextField } from "@/components/ui/TextField";
 import type { SopFormData } from "@/lib/services/sop.service";
 
 interface SopFormProps {

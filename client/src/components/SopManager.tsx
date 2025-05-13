@@ -1,6 +1,6 @@
 import * as React from "react";
-import { Button } from "./Button";
-import { SopForm } from "./SopForm";
+import { Button } from "@/components/ui/Button";
+import { SopForm } from "@/components/SopForm";
 import {
   fetchSops as fetchSopsService,
   createSop as createSopService,
@@ -9,12 +9,21 @@ import {
 } from "@/lib/services/sop.service";
 import type { Sop as SopType, SopFormData } from "@/lib/services/sop.service";
 import type { ApiError } from "@/lib/services/api.service";
+import { DefaultSopsList } from "./DefaultSopsList";
+import { useAuth } from "@/lib/context/AuthContext";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/Dialog";
 
 interface SopManagerProps {
   onSelectSop: (content: string) => void;
 }
 
 export const SopManager: React.FC<SopManagerProps> = ({ onSelectSop }) => {
+  const { user } = useAuth();
   const [sops, setSops] = React.useState<SopType[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [isAdding, setIsAdding] = React.useState(false);
@@ -138,16 +147,21 @@ export const SopManager: React.FC<SopManagerProps> = ({ onSelectSop }) => {
           + Add SOP
         </Button>
       </div>
-      {isAdding && (
-        <SopForm
-          initialData={{ name: "", content: "" }}
-          onSubmit={handleAddSubmit}
-          onCancel={cancelAddForm}
-          isLoading={formLoading}
-          formTitle="Add New SOP"
-          submitButtonText="Save SOP"
-        />
-      )}
+      <Dialog open={isAdding} onOpenChange={setIsAdding}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add New SOP</DialogTitle>
+          </DialogHeader>
+          <SopForm
+            initialData={{ name: "", content: "" }}
+            onSubmit={handleAddSubmit}
+            onCancel={cancelAddForm}
+            isLoading={formLoading}
+            formTitle=""
+            submitButtonText="Save SOP"
+          />
+        </DialogContent>
+      </Dialog>
       {isEditing !== null && (
         <SopForm
           initialData={editingSopData}
@@ -167,7 +181,7 @@ export const SopManager: React.FC<SopManagerProps> = ({ onSelectSop }) => {
         </div>
       )}
       {sops.length > 0 && (
-        <div className="space-y-2 pt-2">
+        <div className="space-y-2 pt-2 max-h-[30vh] overflow-y-auto pr-2">
           {sops.map((sop) => (
             <div
               key={sop.id}
@@ -208,6 +222,11 @@ export const SopManager: React.FC<SopManagerProps> = ({ onSelectSop }) => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {user?.role_id && (
+        <div className="mb-6">
+          <DefaultSopsList roleId={user.role_id} onSelectSop={onSelectSop} />
         </div>
       )}
     </div>
