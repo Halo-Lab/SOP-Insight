@@ -1,5 +1,7 @@
 FROM node:20-alpine
 
+RUN apk add --no-cache git
+
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
