@@ -40,6 +40,8 @@ export const DefaultSopsList: React.FC<DefaultSopsListProps> = ({
     loadSops();
   }, [roleId]);
 
+  if (roleId === -1) return null;
+
   if (!roleId) return null;
   if (loading) return <div className="text-center py-4">Loading SOPs...</div>;
   if (error)

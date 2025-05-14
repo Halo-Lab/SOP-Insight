@@ -109,6 +109,9 @@ export const RoleSelectionModal: React.FC<RoleSelectionModalProps> = ({
                       {role.name}
                     </SelectItem>
                   ))}
+                  <SelectItem key="other" value="-1">
+                    Other / Custom Role
+                  </SelectItem>
                 </SelectContent>
               </Select>
             )}
