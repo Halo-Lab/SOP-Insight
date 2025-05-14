@@ -25,12 +25,16 @@ interface SingleAnalysis {
 
 export interface SopAnalysisResult {
   sop: string;
+  sopName?: string;
   analyses: SingleAnalysis[];
 }
 
 export const HomePage: React.FC = () => {
   const [transcripts, setTranscripts] = React.useState<string[]>([""]);
   const [sops, setSops] = React.useState<string[]>([""]);
+  const [sopNames, setSopNames] = React.useState<(string | undefined)[]>([
+    undefined,
+  ]);
   const [results, setResults] = React.useState<SopAnalysisResult[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -51,16 +55,37 @@ export const HomePage: React.FC = () => {
     setTranscripts((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSopChange = (index: number, value: string) => {
-    setSops((prev) => prev.map((sop, i) => (i === index ? value : sop)));
+  const handleSopChange = (
+    index: number,
+    value: string | { name: string; content: string }
+  ) => {
+    if (typeof value === "string") {
+      const newSops = [...sops];
+      newSops[index] = value;
+      setSops(newSops);
+
+      const newSopNames = [...sopNames];
+      newSopNames[index] = undefined;
+      setSopNames(newSopNames);
+    } else {
+      const newSops = [...sops];
+      newSops[index] = value.content;
+      setSops(newSops);
+
+      const newSopNames = [...sopNames];
+      newSopNames[index] = value.name;
+      setSopNames(newSopNames);
+    }
   };
 
   const handleAddSop = () => {
     setSops((prev) => [...prev, ""]);
+    setSopNames((prev) => [...prev, undefined]);
   };
 
   const handleRemoveSop = (index: number) => {
     setSops((prev) => prev.filter((_, i) => i !== index));
+    setSopNames((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleLogout = () => {
@@ -70,19 +95,29 @@ export const HomePage: React.FC = () => {
   const handleAnalyze = async () => {
     setError(null);
     setResults([]);
+
     if (transcripts.length === 0 || transcripts.some((t) => !t.trim())) {
       setError("At least one transcript is required and cannot be empty.");
       return;
     }
+
     if (sops.length === 0 || sops.some((s) => !s.trim())) {
       setError("At least one SOP is required and cannot be empty.");
       return;
     }
+
     setLoading(true);
+
     try {
       const payload: AnalyzePayload = { transcripts, sops };
       const data = await analyzeTranscriptsService(payload);
-      setResults(data.results || []);
+
+      const resultsWithNames = data.results.map((result) => ({
+        ...result,
+        sopName: sopNames[sops.findIndex((sop) => sop === result.sop)],
+      }));
+
+      setResults(resultsWithNames);
     } catch (err) {
       const apiErr = err as ApiError;
       console.error("Analysis error:", apiErr);
@@ -93,9 +128,8 @@ export const HomePage: React.FC = () => {
       setLoading(false);
     }
   };
-
   const sopTabs = results.map((sopResult, sIdx) => ({
-    label: `SOP ${sIdx + 1}`,
+    label: sopResult.sopName || `SOP ${sIdx + 1}`,
     content: (
       <Tabs
         tabs={sopResult.analyses.map((analysis, tIdx) => ({
@@ -246,8 +280,8 @@ export const HomePage: React.FC = () => {
                           Select SOP
                         </DialogTitle>
                         <SopManager
-                          onSelectSop={(content) => {
-                            handleSopChange(idx, content);
+                          onSelectSop={(sopData) => {
+                            handleSopChange(idx, sopData);
                             setSopDialogIdx(null);
                           }}
                         />

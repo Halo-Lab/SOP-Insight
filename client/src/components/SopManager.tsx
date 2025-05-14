@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/Dialog";
 
 interface SopManagerProps {
-  onSelectSop: (content: string) => void;
+  onSelectSop: (sopData: { name: string; content: string }) => void;
 }
 
 export const SopManager: React.FC<SopManagerProps> = ({ onSelectSop }) => {
@@ -189,7 +189,9 @@ export const SopManager: React.FC<SopManagerProps> = ({ onSelectSop }) => {
             >
               <div
                 className="flex-1 min-w-0 cursor-pointer group"
-                onClick={() => onSelectSop(sop.content)}
+                onClick={() =>
+                  onSelectSop({ name: sop.name, content: sop.content })
+                }
               >
                 <div className="font-medium truncate group-hover:text-blue-600">
                   {sop.name}

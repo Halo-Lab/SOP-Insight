@@ -49,7 +49,7 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, initialIndex = 0 }) => {
             aria-controls={`tabpanel-${idx}`}
             id={`tab-${idx}`}
             tabIndex={active === idx ? 0 : -1}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors focus:outline-none ${
+            className={`px-4 py-2 font-medium border-b-2 transition-colors focus:outline-none cursor-pointer ${
               active === idx
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-gray-600 hover:text-blue-600"

@@ -1,10 +1,11 @@
 import * as React from "react";
 import { sopService } from "@/lib/services/sop.service";
 import type { DefaultSop } from "@/lib/services/sop.service";
+import { rolesService } from "@/lib/services/roles.service";
 
 interface DefaultSopsListProps {
   roleId: number;
-  onSelectSop: (content: string) => void;
+  onSelectSop: (sopData: { name: string; content: string }) => void;
 }
 
 export const DefaultSopsList: React.FC<DefaultSopsListProps> = ({
@@ -14,6 +15,7 @@ export const DefaultSopsList: React.FC<DefaultSopsListProps> = ({
   const [sops, setSops] = React.useState<DefaultSop[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [roleName, setRoleName] = React.useState<string>("");
 
   React.useEffect(() => {
     const loadSops = async () => {
@@ -23,6 +25,12 @@ export const DefaultSopsList: React.FC<DefaultSopsListProps> = ({
       try {
         const data = await sopService.getDefaultSopsByRole(roleId);
         setSops(data);
+
+        const roles = await rolesService.getRoles();
+        const role = roles.find((r) => Number(r.id) === roleId);
+        if (role) {
+          setRoleName(role.name);
+        }
       } catch (err) {
         setError("Failed to load SOPs: " + err);
       } finally {
@@ -44,14 +52,21 @@ export const DefaultSopsList: React.FC<DefaultSopsListProps> = ({
   return (
     <div>
       <div className="font-semibold text-md mb-2 text-center">
-        Platform Suggested SOPs
+        {roleName
+          ? `${roleName} - Platform Suggested SOPs`
+          : "Platform Suggested SOPs"}
       </div>
-      <div className="space-y-4 max-h-[30vh] overflow-y-auto pr-2">
+      <div className="space-y-4 max-h-[28vh] overflow-y-auto pr-2">
         {sops.map((sop) => (
           <div
             key={sop.id}
             className="rounded border p-3 bg-white hover:bg-gray-50 flex items-center justify-between gap-2 max-w-xl mx-auto shadow-sm transition-all hover:shadow-md cursor-pointer"
-            onClick={() => onSelectSop(sop.goal)}
+            onClick={() =>
+              onSelectSop({
+                name: sop.name,
+                content: sop.goal + "\n\n" + sop.content,
+              })
+            }
           >
             <div className="flex-1 min-w-0 group">
               <div className="font-medium text-md group-hover:text-blue-600">
