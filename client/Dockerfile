@@ -1,11 +1,23 @@
 # build environment
 FROM node:18 as builder
-RUN mkdir /usr/src/app
+RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
-ENV PATH /usr/src/app/node_modules/.bin:$PATH
-COPY . /usr/src/app
-RUN npm install
-RUN npm run build:staging
+
+COPY ./package*.json /usr/src/app/
+RUN npm install && npm cache clean --force
+
+COPY ./ /usr/src/app
+
+
+ARG VITE_API_URL=http://localhost:3000
+ARG VITE_SENTRY_DSN=
+
+RUN echo "VITE_API_URL=${VITE_API_URL}" > .env && \
+    if [ ! -z "${VITE_SENTRY_DSN}" ]; then \
+      echo "VITE_SENTRY_DSN=${VITE_SENTRY_DSN}" >> .env; \
+    fi
+
+RUN npm run build
 
 # production environment
 FROM nginx:1.23.3-alpine
