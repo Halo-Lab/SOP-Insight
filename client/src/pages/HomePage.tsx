@@ -16,7 +16,6 @@ import type { AnalyzePayload } from "@/lib/services/sop.service";
 import type { ApiError } from "@/lib/services/api.service";
 import { RoleSelectionModal } from "@/components/RoleSelectionModal";
 import { rolesService } from "@/lib/services/roles.service";
-
 interface SingleAnalysis {
   transcript: string;
   result: string;
@@ -128,6 +127,7 @@ export const HomePage: React.FC = () => {
       setLoading(false);
     }
   };
+
   const sopTabs = results.map((sopResult, sIdx) => ({
     label: sopResult.sopName || `SOP ${sIdx + 1}`,
     content: (

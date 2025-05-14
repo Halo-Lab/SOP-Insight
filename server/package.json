@@ -4,8 +4,8 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "node --import ./sentry-init.js index.js",
+    "dev": "nodemon --import ./sentry-init.js index.js",
     "build": "echo 'No build step required for Node.js server'"
   },
   "keywords": [],

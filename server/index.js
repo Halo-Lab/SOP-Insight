@@ -3,11 +3,9 @@ import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import OpenAI from "openai";
-import { initSentry, Sentry } from './sentry.js';
+import { Sentry } from './sentry.js';
 
 dotenv.config();
-
-initSentry();
 
 const app = express();
 const port = process.env.SERVER_PORT || 3000;
