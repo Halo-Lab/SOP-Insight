@@ -3,13 +3,18 @@ import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import OpenAI from "openai";
+import { initSentry, Sentry } from './sentry.js';
 
 dotenv.config();
+
+initSentry();
 
 const app = express();
 const port = process.env.SERVER_PORT || 3000;
 
-// Middleware
+// Setup Express error handler
+Sentry.setupExpressErrorHandler(app);
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -274,12 +279,12 @@ app.get('/roles', authenticateToken, async (req, res) => {
 app.post('/users/role', authenticateToken, async (req, res) => {
   const { role_id } = req.body;
 
-  if (!role_id) {
+  if (role_id === undefined || role_id === null) {
     return res.status(400).json({ error: 'Role ID is required' });
   }
 
   try {
-    // Оновлюємо поле role_id у таблиці profiles
+    // Update the role_id field in the profiles table
     const { data, error } = await supabase
       .from('profiles')
       .update({ role_id: Number(role_id) })
@@ -308,6 +313,22 @@ app.get('/default-sops', authenticateToken, async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// Sentry test route
+app.get('/test-sentry', (req, res) => {
+  try {
+    throw new Error('Test Sentry Error on Server');
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(200).json({ message: 'Error sent to Sentry!' });
+  }
+});
+
+// Optional fallthrough error handler
+app.use(function onError(err, req, res, next) {
+  res.statusCode = 500;
+  res.end(`Server Error: ${res.sentry}\n`);
 });
 
 app.listen(port, () => {
