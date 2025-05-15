@@ -1,0 +1,80 @@
+import * as React from "react";
+import { Button } from "@/components/ui/Button";
+import { Tabs } from "@/components/ui/Tabs";
+import ReactMarkdown from "react-markdown";
+import type { SopAnalysisResult } from "@/pages/HomePage";
+
+interface AnalysisResultsProps {
+  results: SopAnalysisResult[];
+  onClearResults: () => void;
+  resultsHeaderRef: React.RefObject<HTMLHeadingElement | null>;
+  streamingAnalysis: boolean;
+  loading: boolean;
+}
+
+export const AnalysisResults: React.FC<AnalysisResultsProps> = ({
+  results,
+  onClearResults,
+  resultsHeaderRef,
+  streamingAnalysis,
+  loading,
+}) => {
+  if (results.length === 0) {
+    return null;
+  }
+
+  const sopTabs = results.map((sopResult, sIdx) => ({
+    label: sopResult.sopName || `SOP ${sIdx + 1}`,
+    content: (
+      <Tabs
+        tabs={sopResult.analyses.map((analysis, tIdx) => ({
+          label: `Transcript-analyzed-${tIdx + 1}`,
+          content: (
+            <div className="border rounded-lg p-4 bg-gray-50">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-semibold">Transcript #{tIdx + 1}</span>
+                <span className="text-xs text-gray-500">
+                  Tokens used: {analysis.tokens}
+                </span>
+              </div>
+              <div>
+                <span className="text-sm text-gray-700 font-medium">
+                  Result:
+                </span>
+                <div className="prose prose-sm max-w-none bg-white rounded p-2 mt-1">
+                  <ReactMarkdown>{analysis.result}</ReactMarkdown>
+                </div>
+              </div>
+            </div>
+          ),
+        }))}
+      />
+    ),
+  }));
+
+  return (
+    <div className="mt-8">
+      <div className="flex justify-between items-center mb-4">
+        <h2
+          ref={resultsHeaderRef}
+          className="text-xl font-semibold text-center"
+        >
+          Analysis Results {streamingAnalysis && !loading ? "(Live)" : ""}
+        </h2>
+        <Button
+          variant="outline"
+          ariaLabel="Clear results"
+          onClick={onClearResults}
+          tabIndex={0}
+        >
+          Clear Results
+        </Button>
+      </div>
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <Tabs tabs={sopTabs} />
+      </div>
+    </div>
+  );
+};
+
+export default AnalysisResults;

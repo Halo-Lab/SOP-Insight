@@ -1,21 +1,18 @@
 import * as React from "react";
-import { TextArea } from "@/components/ui/TextArea";
-import { Button } from "@/components/ui/Button";
-import { Tabs } from "@/components/ui/Tabs";
-import { SopManager } from "@/components/SopManager";
-import ReactMarkdown from "react-markdown";
 import { useAuth } from "@/lib/context/AuthContext";
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-  DialogTitle,
-} from "@/components/ui/Dialog";
-import { analyzeTranscripts as analyzeTranscriptsService } from "@/lib/services/sop.service";
-import type { AnalyzePayload } from "@/lib/services/sop.service";
-import type { ApiError } from "@/lib/services/api.service";
+import { analyzeTranscriptsStream } from "@/lib/services/sop.service";
+import type {
+  AnalyzePayload,
+  StreamAnalysisResult,
+} from "@/lib/services/sop.service";
 import { RoleSelectionModal } from "@/components/RoleSelectionModal";
 import { rolesService } from "@/lib/services/roles.service";
+import TranscriptSection from "@/components/TranscriptSection";
+import SopSection from "@/components/SopSection";
+import AnalysisControls from "@/components/AnalysisControls";
+import AnalysisResults from "@/components/AnalysisResults";
+import Header from "@/components/Header";
+
 interface SingleAnalysis {
   transcript: string;
   result: string;
@@ -39,8 +36,14 @@ export const HomePage: React.FC = () => {
   const [error, setError] = React.useState<string | null>(null);
   const [sopDialogIdx, setSopDialogIdx] = React.useState<number | null>(null);
   const { logout, user, setUser, loading: authLoading } = useAuth();
-  const resultsHeaderRef = React.useRef<HTMLHeadingElement | null>(null);
+  const resultsHeaderRef = React.useRef<HTMLHeadingElement>(null);
   const [showRoleModal, setShowRoleModal] = React.useState(false);
+  const [streamingAnalysis, setStreamingAnalysis] = React.useState(false);
+  const [abortAnalysis, setAbortAnalysis] = React.useState<(() => void) | null>(
+    null
+  );
+  const [analysisProgress, setAnalysisProgress] = React.useState<number>(0);
+  const [totalAnalysisCount, setTotalAnalysisCount] = React.useState<number>(0);
 
   const handleTranscriptChange = (index: number, value: string) => {
     setTranscripts((prev) => prev.map((t, i) => (i === index ? value : t)));
@@ -91,7 +94,7 @@ export const HomePage: React.FC = () => {
     logout();
   };
 
-  const handleAnalyze = async () => {
+  const handleStreamAnalyze = () => {
     setError(null);
     setResults([]);
 
@@ -106,56 +109,69 @@ export const HomePage: React.FC = () => {
     }
 
     setLoading(true);
+    setStreamingAnalysis(true);
+    setAnalysisProgress(0);
 
-    try {
-      const payload: AnalyzePayload = { transcripts, sops };
-      const data = await analyzeTranscriptsService(payload);
+    const totalCount = sops.length * transcripts.length;
+    setTotalAnalysisCount(totalCount);
 
-      const resultsWithNames = data.results.map((result) => ({
-        ...result,
-        sopName: sopNames[sops.findIndex((sop) => sop === result.sop)],
-      }));
+    const payload: AnalyzePayload = { transcripts, sops };
 
-      setResults(resultsWithNames);
-    } catch (err) {
-      const apiErr = err as ApiError;
-      console.error("Analysis error:", apiErr);
-      setError(
-        apiErr.message || "Analysis failed due to a network or server error."
-      );
-    } finally {
+    const abort = analyzeTranscriptsStream(
+      payload,
+      (data: StreamAnalysisResult) => {
+        let completedCount = 0;
+        data.results.forEach((result) => {
+          completedCount += result.analyses.length;
+        });
+
+        setAnalysisProgress(completedCount);
+
+        const resultsWithNames = data.results.map((result) => ({
+          ...result,
+          sopName: sopNames[sops.findIndex((sop) => sop === result.sop)],
+        }));
+
+        setResults((prevResults) => {
+          if (
+            JSON.stringify(prevResults) !== JSON.stringify(resultsWithNames)
+          ) {
+            return resultsWithNames;
+          }
+          return prevResults;
+        });
+      },
+      (err: Error) => {
+        setError(err.message || "Analysis stream failed.");
+        setLoading(false);
+        setStreamingAnalysis(false);
+        setAbortAnalysis(null);
+      },
+      () => {
+        setLoading(false);
+        setStreamingAnalysis(false);
+        setAbortAnalysis(null);
+      }
+    );
+
+    setAbortAnalysis(() => abort);
+  };
+
+  const handleCancelAnalysis = () => {
+    if (abortAnalysis) {
+      abortAnalysis();
+      setAbortAnalysis(null);
       setLoading(false);
+      setStreamingAnalysis(false);
     }
   };
 
-  const sopTabs = results.map((sopResult, sIdx) => ({
-    label: sopResult.sopName || `SOP ${sIdx + 1}`,
-    content: (
-      <Tabs
-        tabs={sopResult.analyses.map((analysis, tIdx) => ({
-          label: `Transcript-analyzed-${tIdx + 1}`,
-          content: (
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-semibold">Transcript #{tIdx + 1}</span>
-                <span className="text-xs text-gray-500">
-                  Tokens used: {analysis.tokens}
-                </span>
-              </div>
-              <div>
-                <span className="text-sm text-gray-700 font-medium">
-                  Result:
-                </span>
-                <div className="prose prose-sm max-w-none bg-white rounded p-2 mt-1">
-                  <ReactMarkdown>{analysis.result}</ReactMarkdown>
-                </div>
-              </div>
-            </div>
-          ),
-        }))}
-      />
-    ),
-  }));
+  const handleClearResults = () => {
+    setResults([]);
+    setAnalysisProgress(0);
+    setTotalAnalysisCount(0);
+    setError(null);
+  };
 
   React.useEffect(() => {
     if (results.length > 0 && resultsHeaderRef.current) {
@@ -183,159 +199,47 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="w-full bg-white shadow-sm mb-8">
-        <div className="max-w-5xl mx-auto flex items-center justify-between py-4 px-4">
-          <h1 className="text-xl sm:text-2xl font-bold">
-            SOP Insight Analyzer
-          </h1>
-          <Button
-            variant="outline"
-            ariaLabel="Logout"
-            onClick={handleLogout}
-            tabIndex={0}
-          >
-            Logout
-          </Button>
-        </div>
-      </header>
+      <Header onLogout={handleLogout} />
+
       <main className="max-w-5xl mx-auto px-4 pb-10">
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4">Transcripts</h2>
-            <div className="space-y-4">
-              {transcripts.map((transcript, idx) => (
-                <div key={idx} className="flex gap-2 items-start">
-                  <TextArea
-                    value={transcript}
-                    onChange={(e) =>
-                      handleTranscriptChange(idx, e.target.value)
-                    }
-                    required
-                    placeholder={`Paste transcript #${idx + 1} here...`}
-                    rows={6}
-                  />
-                  {transcripts.length > 1 && (
-                    <Button
-                      variant="outline"
-                      ariaLabel="Remove transcript"
-                      onClick={() => handleRemoveTranscript(idx)}
-                      tabIndex={0}
-                    >
-                      Remove
-                    </Button>
-                  )}
-                </div>
-              ))}
-              <Button
-                variant="secondary"
-                ariaLabel="Add transcript"
-                onClick={handleAddTranscript}
-                tabIndex={0}
-              >
-                + Add transcript
-              </Button>
-            </div>
-          </div>
+          <TranscriptSection
+            transcripts={transcripts}
+            onTranscriptChange={handleTranscriptChange}
+            onAddTranscript={handleAddTranscript}
+            onRemoveTranscript={handleRemoveTranscript}
+          />
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4">Manual SOPs</h2>
-            <div className="space-y-4">
-              {sops.map((sop, idx) => (
-                <div key={idx} className="flex gap-2 items-start">
-                  <TextArea
-                    value={sop}
-                    onChange={(e) => handleSopChange(idx, e.target.value)}
-                    required
-                    placeholder={`Paste SOP #${idx + 1} here...`}
-                    rows={6}
-                  />
-                  <div className="flex flex-col gap-2">
-                    {sops.length > 1 && (
-                      <Button
-                        variant="outline"
-                        ariaLabel="Remove SOP"
-                        onClick={() => handleRemoveSop(idx)}
-                        tabIndex={0}
-                      >
-                        Remove
-                      </Button>
-                    )}
-                    <Dialog
-                      open={sopDialogIdx === idx}
-                      onOpenChange={(open) =>
-                        setSopDialogIdx(open ? idx : null)
-                      }
-                    >
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          ariaLabel="Insert SOP"
-                          tabIndex={0}
-                        >
-                          SOP
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogTitle className="sr-only">
-                          Select SOP
-                        </DialogTitle>
-                        <SopManager
-                          onSelectSop={(sopData) => {
-                            handleSopChange(idx, sopData);
-                            setSopDialogIdx(null);
-                          }}
-                        />
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </div>
-              ))}
-              <Button
-                variant="secondary"
-                ariaLabel="Add SOP"
-                onClick={handleAddSop}
-                tabIndex={0}
-              >
-                + Add SOP
-              </Button>
-            </div>
-          </div>
+          <SopSection
+            sops={sops}
+            onSopChange={handleSopChange}
+            onAddSop={handleAddSop}
+            onRemoveSop={handleRemoveSop}
+            sopDialogIdx={sopDialogIdx}
+            setSopDialogIdx={setSopDialogIdx}
+          />
         </div>
 
-        <div className="mt-8">
-          {error && (
-            <div
-              className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg text-center"
-              role="alert"
-            >
-              {error}
-            </div>
-          )}
-          <Button
-            onClick={handleAnalyze}
-            loading={loading}
-            ariaLabel="Analyze transcripts"
-            tabIndex={0}
-            className="w-full sm:w-auto"
-          >
-            Analyze
-          </Button>
-        </div>
+        <AnalysisControls
+          onAnalyze={handleStreamAnalyze}
+          onCancel={handleCancelAnalysis}
+          error={error}
+          loading={loading}
+          streamingAnalysis={streamingAnalysis}
+          abortAnalysis={abortAnalysis}
+          analysisProgress={analysisProgress}
+          totalAnalysisCount={totalAnalysisCount}
+        />
 
-        {results.length > 0 && (
-          <div className="mt-8">
-            <h2
-              ref={resultsHeaderRef}
-              className="text-xl font-semibold mb-4 text-center"
-            >
-              Analysis Results
-            </h2>
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <Tabs tabs={sopTabs} />
-            </div>
-          </div>
-        )}
+        <AnalysisResults
+          results={results}
+          onClearResults={handleClearResults}
+          resultsHeaderRef={resultsHeaderRef}
+          streamingAnalysis={streamingAnalysis}
+          loading={loading}
+        />
       </main>
+
       <RoleSelectionModal
         isOpen={showRoleModal}
         onClose={() => setShowRoleModal(false)}

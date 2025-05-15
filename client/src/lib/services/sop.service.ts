@@ -1,4 +1,4 @@
-import request from "./api.service";
+import request, { requestStream } from "./api.service";
 
 // Define interfaces for SOP data
 export interface Sop {
@@ -17,6 +17,27 @@ export interface SopFormData {
 
 export interface AnalysisResult {
   results: Array<{
+    sop: string;
+    analyses: Array<{
+      transcript: string;
+      result: string;
+      tokens: number;
+    }>;
+  }>;
+}
+
+export interface StreamAnalysisResult {
+  results: Array<{
+    sop: string;
+    analyses: Array<{
+      transcript: string;
+      result: string;
+      tokens: number;
+    }>;
+  }>;
+  error?: string;
+  completed?: boolean;
+  partialResults?: Array<{
     sop: string;
     analyses: Array<{
       transcript: string;
@@ -80,11 +101,42 @@ export const analyzeTranscripts = async (
   });
 };
 
+// Streaming analysis function using Server-Sent Events
+export const analyzeTranscriptsStream = (
+  payload: AnalyzePayload,
+  onProgress: (data: StreamAnalysisResult) => void,
+  onError: (error: Error) => void,
+  onComplete: () => void
+): (() => void) => {
+  return requestStream<StreamAnalysisResult>(
+    "/analyze/stream",
+    {
+      method: "POST",
+      data: payload,
+    },
+    (data) => {
+      if (data.error) {
+        onError(new Error(data.error));
+        if (data.partialResults) {
+          onProgress({ results: data.partialResults });
+        }
+      } else if (data.results) {
+        onProgress(data);
+        if (data.completed) {
+          onComplete();
+        }
+      }
+    },
+    onError,
+    onComplete
+  );
+};
+
 export const sopService = {
   async getDefaultSopsByRole(roleId: number): Promise<DefaultSop[]> {
     try {
       const result = await request<DefaultSop[]>(
-        `/default-sops?role_id=${roleId}`
+        `/sop/default-sops?role_id=${roleId}`
       );
       return result;
     } catch (error) {
