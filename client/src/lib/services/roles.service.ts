@@ -14,7 +14,7 @@ export const rolesService = {
   },
 
   async updateUserRole(roleId: number): Promise<void> {
-    await request<void>("/users/role", {
+    await request<void>("/auth/users/role", {
       method: "POST",
       data: { role_id: roleId },
     });
