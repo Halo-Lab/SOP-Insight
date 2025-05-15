@@ -1,4 +1,5 @@
 import request, { requestStream } from "./api.service";
+import type { SopAnalysisResult } from "@/pages/HomePage";
 
 // Define interfaces for SOP data
 export interface Sop {
@@ -8,6 +9,14 @@ export interface Sop {
   user_id: string;
   created_at: string;
   // Add any other relevant fields
+}
+
+export interface AnalysisHistory {
+  id: string;
+  name: string;
+  results: string | SopAnalysisResult[];
+  user_id: string;
+  created_at: string;
 }
 
 export interface SopFormData {
@@ -130,6 +139,45 @@ export const analyzeTranscriptsStream = (
     onError,
     onComplete
   );
+};
+
+// History API functions
+export const saveAnalysisHistory = async (
+  name: string,
+  results: SopAnalysisResult[]
+): Promise<AnalysisHistory> => {
+  return request<AnalysisHistory>("/analyze/history", {
+    method: "POST",
+    body: JSON.stringify({ name, results }),
+  });
+};
+
+export const getAnalysisHistory = async (): Promise<AnalysisHistory[]> => {
+  return request<AnalysisHistory[]>("/analyze/history");
+};
+
+export const getAnalysisHistoryItem = async (
+  id: string
+): Promise<AnalysisHistory> => {
+  return request<AnalysisHistory>(`/analyze/history/${id}`);
+};
+
+export const deleteAnalysisHistory = async (
+  id: string
+): Promise<{ success: boolean }> => {
+  return request<{ success: boolean }>(`/analyze/history/${id}`, {
+    method: "DELETE",
+  });
+};
+
+export const updateAnalysisHistoryName = async (
+  id: string,
+  name: string
+): Promise<AnalysisHistory> => {
+  return request<AnalysisHistory>(`/analyze/history/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ name }),
+  });
 };
 
 export const sopService = {

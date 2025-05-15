@@ -1,9 +1,13 @@
 import * as React from "react";
 import { useAuth } from "@/lib/context/AuthContext";
-import { analyzeTranscriptsStream } from "@/lib/services/sop.service";
+import {
+  analyzeTranscriptsStream,
+  saveAnalysisHistory,
+} from "@/lib/services/sop.service";
 import type {
   AnalyzePayload,
   StreamAnalysisResult,
+  AnalysisHistory,
 } from "@/lib/services/sop.service";
 import { RoleSelectionModal } from "@/components/RoleSelectionModal";
 import { rolesService } from "@/lib/services/roles.service";
@@ -11,7 +15,10 @@ import TranscriptSection from "@/components/TranscriptSection";
 import SopSection from "@/components/SopSection";
 import AnalysisControls from "@/components/AnalysisControls";
 import AnalysisResults from "@/components/AnalysisResults";
-import Header from "@/components/Header";
+import AnalysisHistoryViewer from "@/components/AnalysisHistoryViewer";
+import MainLayout from "@/components/MainLayout";
+import { Button } from "@/components/ui/Button";
+import { toast } from "sonner";
 
 interface SingleAnalysis {
   transcript: string;
@@ -44,6 +51,11 @@ export const HomePage: React.FC = () => {
   );
   const [analysisProgress, setAnalysisProgress] = React.useState<number>(0);
   const [totalAnalysisCount, setTotalAnalysisCount] = React.useState<number>(0);
+
+  const [showHistory, setShowHistory] = React.useState<boolean>(true);
+  const [selectedHistory, setSelectedHistory] =
+    React.useState<AnalysisHistory | null>(null);
+  const [viewingHistory, setViewingHistory] = React.useState<boolean>(false);
 
   const handleTranscriptChange = (index: number, value: string) => {
     setTranscripts((prev) => prev.map((t, i) => (i === index ? value : t)));
@@ -97,6 +109,8 @@ export const HomePage: React.FC = () => {
   const handleStreamAnalyze = () => {
     setError(null);
     setResults([]);
+    setViewingHistory(false);
+    setSelectedHistory(null);
 
     if (transcripts.length === 0 || transcripts.some((t) => !t.trim())) {
       setError("At least one transcript is required and cannot be empty.");
@@ -173,6 +187,40 @@ export const HomePage: React.FC = () => {
     setError(null);
   };
 
+  const handleSaveResults = async () => {
+    if (results.length === 0) {
+      toast.error("No results to save");
+      return;
+    }
+
+    try {
+      const currentDate = new Date();
+      const name = `Analysis ${currentDate.toLocaleDateString()} ${currentDate.toLocaleTimeString()}`;
+
+      await saveAnalysisHistory(name, results);
+      toast.success("Analysis saved to history");
+
+      // Refresh the history sidebar by triggering a state change
+      setShowHistory(true);
+      // Force the AnalysisHistorySidebar to refresh its data
+      const event = new CustomEvent("refreshAnalysisHistory");
+      window.dispatchEvent(event);
+    } catch (error) {
+      toast.error("Failed to save analysis");
+      console.error(error);
+    }
+  };
+
+  const handleSelectHistory = (history: AnalysisHistory) => {
+    setSelectedHistory(history);
+    setViewingHistory(true);
+  };
+
+  const handleBackToCurrentAnalysis = () => {
+    setViewingHistory(false);
+    setSelectedHistory(null);
+  };
+
   React.useEffect(() => {
     if (results.length > 0 && resultsHeaderRef.current) {
       resultsHeaderRef.current.scrollIntoView({ behavior: "smooth" });
@@ -197,55 +245,117 @@ export const HomePage: React.FC = () => {
     }
   };
 
+  const toggleHistory = () => {
+    setShowHistory(!showHistory);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header onLogout={handleLogout} />
+    <>
+      <MainLayout
+        showHistory={showHistory}
+        toggleHistory={toggleHistory}
+        selectedHistory={selectedHistory}
+        onSelectHistory={handleSelectHistory}
+        onLogout={handleLogout}
+      >
+        {viewingHistory ? (
+          <div>
+            <div className="flex justify-between items-center my-4">
+              <h2 className="text-xl font-semibold">Viewing Saved Analysis</h2>
+              <Button
+                onClick={handleBackToCurrentAnalysis}
+                variant="outline"
+                className="text-blue-600 hover:text-blue-800 flex items-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mr-1"
+                >
+                  <path d="M19 12H5" />
+                  <path d="M12 19l-7-7 7-7" />
+                </svg>
+                Back to Current Analysis
+              </Button>
+            </div>
+            <AnalysisHistoryViewer history={selectedHistory} />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <TranscriptSection
+              transcripts={transcripts}
+              onTranscriptChange={handleTranscriptChange}
+              onAddTranscript={handleAddTranscript}
+              onRemoveTranscript={handleRemoveTranscript}
+            />
 
-      <main className="max-w-5xl mx-auto px-4 pb-10">
-        <div className="space-y-6">
-          <TranscriptSection
-            transcripts={transcripts}
-            onTranscriptChange={handleTranscriptChange}
-            onAddTranscript={handleAddTranscript}
-            onRemoveTranscript={handleRemoveTranscript}
-          />
+            <SopSection
+              sops={sops}
+              onSopChange={handleSopChange}
+              onAddSop={handleAddSop}
+              onRemoveSop={handleRemoveSop}
+              sopDialogIdx={sopDialogIdx}
+              setSopDialogIdx={setSopDialogIdx}
+            />
 
-          <SopSection
-            sops={sops}
-            onSopChange={handleSopChange}
-            onAddSop={handleAddSop}
-            onRemoveSop={handleRemoveSop}
-            sopDialogIdx={sopDialogIdx}
-            setSopDialogIdx={setSopDialogIdx}
-          />
-        </div>
+            <AnalysisControls
+              onAnalyze={handleStreamAnalyze}
+              onCancel={handleCancelAnalysis}
+              error={error}
+              loading={loading}
+              streamingAnalysis={streamingAnalysis}
+              abortAnalysis={abortAnalysis}
+              analysisProgress={analysisProgress}
+              totalAnalysisCount={totalAnalysisCount}
+            />
 
-        <AnalysisControls
-          onAnalyze={handleStreamAnalyze}
-          onCancel={handleCancelAnalysis}
-          error={error}
-          loading={loading}
-          streamingAnalysis={streamingAnalysis}
-          abortAnalysis={abortAnalysis}
-          analysisProgress={analysisProgress}
-          totalAnalysisCount={totalAnalysisCount}
-        />
-
-        <AnalysisResults
-          results={results}
-          onClearResults={handleClearResults}
-          resultsHeaderRef={resultsHeaderRef}
-          streamingAnalysis={streamingAnalysis}
-          loading={loading}
-        />
-      </main>
+            {results.length > 0 && (
+              <div className="mt-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h2
+                    ref={resultsHeaderRef}
+                    className="text-xl font-semibold text-center"
+                  >
+                    Analysis Results{" "}
+                    {streamingAnalysis && !loading ? "(Live)" : ""}
+                  </h2>
+                  <div className="flex space-x-2">
+                    <Button
+                      onClick={handleSaveResults}
+                      variant="secondary"
+                      disabled={loading || results.length === 0}
+                    >
+                      Save Results
+                    </Button>
+                    <Button
+                      onClick={handleClearResults}
+                      variant="outline"
+                      disabled={loading || results.length === 0}
+                    >
+                      Clear Results
+                    </Button>
+                  </div>
+                </div>
+                <AnalysisResults results={results} />
+              </div>
+            )}
+          </div>
+        )}
+      </MainLayout>
 
       <RoleSelectionModal
         isOpen={showRoleModal}
         onClose={() => setShowRoleModal(false)}
         onRoleSelect={handleRoleSelect}
       />
-    </div>
+    </>
   );
 };
 

@@ -63,3 +63,16 @@ npm start
 ### Sentry
 
 - `GET /test-sentry/test` - Test Sentry integration
+
+## Database Setup
+
+### Creating Tables
+
+To create the necessary tables in your Supabase database, execute the following SQL scripts:
+
+1. First create the base tables (users, roles, sops, default_sops)
+2. Then create the analysis history table by running the SQL script in `server/seed/analysis_history_table.sql`
+
+### Security Policies
+
+Make sure Row Level Security (RLS) is enabled for all tables and appropriate access policies are created.

@@ -1,4 +1,5 @@
 import openai from '../config/openai.js';
+import supabase from '../config/database.js';
 
 export const analyzeTranscripts = async (req, res) => {
   const { transcripts, sops } = req.body;
@@ -95,5 +96,134 @@ export const analyzeTranscriptsStream = async (req, res) => {
     res.write(`data: ${JSON.stringify({ error: error.message || 'OpenAI error' })}\n\n`);
     res.flush && res.flush();
     res.end();
+  }
+};
+
+export const saveAnalysisHistory = async (req, res) => {
+  const { name, results } = req.body;
+
+  if (!results || !Array.isArray(results)) {
+    return res.status(400).json({ error: 'Valid analysis results are required' });
+  }
+
+  try {
+    const historyName = name || new Date().toLocaleString();
+
+    const { data, error } = await supabase
+      .from('analysis_history')
+      .insert([{
+        name: historyName,
+        results: JSON.stringify(results),
+        user_id: req.user.id,
+        created_at: new Date().toISOString()
+      }])
+      .select();
+
+    if (error) throw error;
+    res.json(data[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getAnalysisHistory = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('analysis_history')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getAnalysisHistoryItem = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { data, error } = await supabase
+      .from('analysis_history')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (error) throw error;
+    if (!data) {
+      return res.status(404).json({ error: 'Analysis history item not found' });
+    }
+
+    data.results = JSON.parse(data.results);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const deleteAnalysisHistory = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { data: existingItem, error: checkError } = await supabase
+      .from('analysis_history')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (checkError) throw checkError;
+    if (!existingItem) {
+      return res.status(404).json({ error: 'Analysis history item not found' });
+    }
+
+    const { error } = await supabase
+      .from('analysis_history')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', req.user.id);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateAnalysisHistoryName = async (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  try {
+    const { data: existingItem, error: checkError } = await supabase
+      .from('analysis_history')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (checkError) throw checkError;
+    if (!existingItem) {
+      return res.status(404).json({ error: 'Analysis history item not found' });
+    }
+
+    const { data, error } = await supabase
+      .from('analysis_history')
+      .update({ name })
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .select();
+
+    if (error) throw error;
+    res.json(data[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 }; 

@@ -1,23 +1,14 @@
 import * as React from "react";
-import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import ReactMarkdown from "react-markdown";
 import type { SopAnalysisResult } from "@/pages/HomePage";
 
 interface AnalysisResultsProps {
   results: SopAnalysisResult[];
-  onClearResults: () => void;
-  resultsHeaderRef: React.RefObject<HTMLHeadingElement | null>;
-  streamingAnalysis: boolean;
-  loading: boolean;
 }
 
 export const AnalysisResults: React.FC<AnalysisResultsProps> = ({
   results,
-  onClearResults,
-  resultsHeaderRef,
-  streamingAnalysis,
-  loading,
 }) => {
   if (results.length === 0) {
     return null;
@@ -53,23 +44,7 @@ export const AnalysisResults: React.FC<AnalysisResultsProps> = ({
   }));
 
   return (
-    <div className="mt-8">
-      <div className="flex justify-between items-center mb-4">
-        <h2
-          ref={resultsHeaderRef}
-          className="text-xl font-semibold text-center"
-        >
-          Analysis Results {streamingAnalysis && !loading ? "(Live)" : ""}
-        </h2>
-        <Button
-          variant="outline"
-          ariaLabel="Clear results"
-          onClick={onClearResults}
-          tabIndex={0}
-        >
-          Clear Results
-        </Button>
-      </div>
+    <div>
       <div className="bg-white rounded-lg shadow-sm p-6">
         <Tabs tabs={sopTabs} />
       </div>
