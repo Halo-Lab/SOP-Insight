@@ -1,6 +1,7 @@
 import * as React from "react";
 import { TextArea } from "@/components/ui/TextArea";
 import { Button } from "@/components/ui/Button";
+import { Icons } from "@/components/ui/Icons";
 
 interface TranscriptSectionProps {
   transcripts: string[];
@@ -34,6 +35,7 @@ export const TranscriptSection: React.FC<TranscriptSectionProps> = ({
                 ariaLabel="Remove transcript"
                 onClick={() => onRemoveTranscript(idx)}
                 tabIndex={0}
+                leftIcon={Icons.remove}
               >
                 Remove
               </Button>
@@ -45,8 +47,9 @@ export const TranscriptSection: React.FC<TranscriptSectionProps> = ({
           ariaLabel="Add transcript"
           onClick={onAddTranscript}
           tabIndex={0}
+          leftIcon={Icons.add}
         >
-          + Add transcript
+          Add transcript
         </Button>
       </div>
     </div>

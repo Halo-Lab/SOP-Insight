@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/Button";
 import { TextArea } from "@/components/ui/TextArea";
 import { TextField } from "@/components/ui/TextField";
 import type { SopFormData } from "@/lib/services/sop.service";
+import { Icons } from "@/components/ui/Icons";
 
 interface SopFormProps {
   initialData: SopFormData;
@@ -54,11 +55,12 @@ export const SopForm: React.FC<SopFormProps> = ({
       />
       <div className="flex gap-2 justify-end">
         <Button
-          type="button" // Ensure it doesn't submit the form
+          type="button"
           variant="outline"
           size="sm"
           onClick={onCancel}
           disabled={isLoading}
+          leftIcon={Icons.close}
         >
           Cancel
         </Button>
@@ -67,6 +69,7 @@ export const SopForm: React.FC<SopFormProps> = ({
           size="sm"
           loading={isLoading}
           disabled={isLoading}
+          leftIcon={Icons.save}
         >
           {submitButtonText}
         </Button>

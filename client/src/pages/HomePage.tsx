@@ -9,16 +9,17 @@ import type {
   StreamAnalysisResult,
   AnalysisHistory,
 } from "@/lib/services/sop.service";
-import { RoleSelectionModal } from "@/components/RoleSelectionModal";
+import { RoleSelectionModal } from "@/features/auth/components/RoleSelectionModal";
 import { rolesService } from "@/lib/services/roles.service";
-import TranscriptSection from "@/components/TranscriptSection";
-import SopSection from "@/components/SopSection";
-import AnalysisControls from "@/components/AnalysisControls";
-import AnalysisResults from "@/components/AnalysisResults";
-import AnalysisHistoryViewer from "@/components/AnalysisHistoryViewer";
-import MainLayout from "@/components/MainLayout";
+import TranscriptSection from "@/features/analysis/components/TranscriptSection";
+import SopSection from "@/features/sop/components/SopSection";
+import AnalysisControls from "@/features/analysis/components/AnalysisControls";
+import AnalysisResults from "@/features/analysis/components/AnalysisResults";
+import AnalysisHistoryViewer from "@/features/analysis/components/AnalysisHistoryViewer";
+import MainLayout from "@/components/common/MainLayout";
 import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
+import { Icons } from "@/components/ui/Icons";
 
 interface SingleAnalysis {
   transcript: string;
@@ -40,7 +41,6 @@ export const HomePage: React.FC = () => {
   ]);
   const [results, setResults] = React.useState<SopAnalysisResult[]>([]);
   const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
   const [sopDialogIdx, setSopDialogIdx] = React.useState<number | null>(null);
   const { logout, user, setUser, loading: authLoading } = useAuth();
   const resultsHeaderRef = React.useRef<HTMLHeadingElement>(null);
@@ -107,21 +107,21 @@ export const HomePage: React.FC = () => {
   };
 
   const handleStreamAnalyze = () => {
-    setError(null);
     setResults([]);
     setViewingHistory(false);
     setSelectedHistory(null);
 
     if (transcripts.length === 0 || transcripts.some((t) => !t.trim())) {
-      setError("At least one transcript is required and cannot be empty.");
+      toast.error("At least one transcript is required and cannot be empty.");
       return;
     }
 
     if (sops.length === 0 || sops.some((s) => !s.trim())) {
-      setError("At least one SOP is required and cannot be empty.");
+      toast.error("At least one SOP is required and cannot be empty.");
       return;
     }
 
+    toast.info("Starting analysis...");
     setLoading(true);
     setStreamingAnalysis(true);
     setAnalysisProgress(0);
@@ -156,15 +156,16 @@ export const HomePage: React.FC = () => {
         });
       },
       (err: Error) => {
-        setError(err.message || "Analysis stream failed.");
         setLoading(false);
         setStreamingAnalysis(false);
         setAbortAnalysis(null);
+        toast.error(err.message || "Analysis stream failed.");
       },
       () => {
         setLoading(false);
         setStreamingAnalysis(false);
         setAbortAnalysis(null);
+        toast.success("Analysis completed successfully!");
       }
     );
 
@@ -177,6 +178,7 @@ export const HomePage: React.FC = () => {
       setAbortAnalysis(null);
       setLoading(false);
       setStreamingAnalysis(false);
+      toast.info("Analysis cancelled");
     }
   };
 
@@ -184,7 +186,7 @@ export const HomePage: React.FC = () => {
     setResults([]);
     setAnalysisProgress(0);
     setTotalAnalysisCount(0);
-    setError(null);
+    toast.info("Results cleared");
   };
 
   const handleSaveResults = async () => {
@@ -240,8 +242,10 @@ export const HomePage: React.FC = () => {
         setUser({ ...user, role_id: Number(roleId) });
       }
       setShowRoleModal(false);
+      toast.success("Role updated successfully");
     } catch (error) {
       console.error("Error updating role:", error);
+      toast.error("Failed to update role");
     }
   };
 
@@ -266,22 +270,8 @@ export const HomePage: React.FC = () => {
                 onClick={handleBackToCurrentAnalysis}
                 variant="outline"
                 className="text-blue-600 hover:text-blue-800 flex items-center"
+                leftIcon={Icons.arrowLeft}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mr-1"
-                >
-                  <path d="M19 12H5" />
-                  <path d="M12 19l-7-7 7-7" />
-                </svg>
                 Back to Current Analysis
               </Button>
             </div>
@@ -308,7 +298,6 @@ export const HomePage: React.FC = () => {
             <AnalysisControls
               onAnalyze={handleStreamAnalyze}
               onCancel={handleCancelAnalysis}
-              error={error}
               loading={loading}
               streamingAnalysis={streamingAnalysis}
               abortAnalysis={abortAnalysis}
@@ -331,6 +320,7 @@ export const HomePage: React.FC = () => {
                       onClick={handleSaveResults}
                       variant="secondary"
                       disabled={loading || results.length === 0}
+                      leftIcon={Icons.save}
                     >
                       Save Results
                     </Button>
@@ -338,6 +328,7 @@ export const HomePage: React.FC = () => {
                       onClick={handleClearResults}
                       variant="outline"
                       disabled={loading || results.length === 0}
+                      leftIcon={Icons.delete}
                     >
                       Clear Results
                     </Button>

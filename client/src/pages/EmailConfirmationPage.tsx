@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
+import { Loader } from "@/components/ui/Loader";
 
 export const EmailConfirmationPage: React.FC = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -80,7 +81,7 @@ export const EmailConfirmationPage: React.FC = () => {
       <div className="max-w-lg w-full space-y-8 p-10 bg-white rounded-xl shadow-2xl text-center">
         {status === "loading" && (
           <>
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mx-auto mb-6"></div>
+            <Loader size="lg" className="mx-auto mb-6" />
             <h2 className="text-2xl font-semibold text-gray-700 mb-2">
               Confirming Your Email
             </h2>

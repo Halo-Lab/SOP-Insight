@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import {
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/Select";
 import type { Role } from "@/lib/services/roles.service";
 import { rolesService } from "@/lib/services/roles.service";
+import { Loader } from "@/components/ui/Loader";
 
 interface RoleSelectionModalProps {
   isOpen: boolean;
@@ -70,13 +72,13 @@ export const RoleSelectionModal: React.FC<RoleSelectionModalProps> = ({
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Select Your Role</DialogTitle>
+          <DialogDescription>
+            Choose the role that best describes your position to customize the
+            system to your needs.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="space-y-2">
-            <p className="text-sm text-gray-500">
-              Choose the role that best describes your position. This will help
-              us customize the system to your needs.
-            </p>
             <div className="flex items-center mt-2 mb-4">
               <svg
                 className="w-5 h-5 text-blue-500 mr-2"
@@ -97,7 +99,9 @@ export const RoleSelectionModal: React.FC<RoleSelectionModalProps> = ({
               </span>
             </div>
             {loading ? (
-              <div className="text-center">Loading...</div>
+              <div className="flex justify-center py-4">
+                <Loader />
+              </div>
             ) : (
               <Select value={selectedRole} onValueChange={setSelectedRole}>
                 <SelectTrigger>
@@ -121,7 +125,13 @@ export const RoleSelectionModal: React.FC<RoleSelectionModalProps> = ({
             disabled={!selectedRole || submitting}
             className="w-full"
           >
-            {submitting ? "Saving..." : "Continue"}
+            {submitting ? (
+              <div className="flex items-center gap-2">
+                <Loader size="sm" /> Saving...
+              </div>
+            ) : (
+              "Continue"
+            )}
           </Button>
         </form>
       </DialogContent>

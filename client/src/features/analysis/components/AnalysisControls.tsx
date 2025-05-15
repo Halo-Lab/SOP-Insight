@@ -1,11 +1,11 @@
 import * as React from "react";
 import { Button } from "@/components/ui/Button";
-import { AnalysisStatus } from "@/components/AnalysisStatus";
+import { AnalysisStatus } from "@/features/analysis/components/AnalysisStatus";
+import { Icons } from "@/components/ui/Icons";
 
 interface AnalysisControlsProps {
   onAnalyze: () => void;
   onCancel: () => void;
-  error: string | null;
   loading: boolean;
   streamingAnalysis: boolean;
   abortAnalysis: (() => void) | null;
@@ -16,7 +16,6 @@ interface AnalysisControlsProps {
 export const AnalysisControls: React.FC<AnalysisControlsProps> = ({
   onAnalyze,
   onCancel,
-  error,
   loading,
   streamingAnalysis,
   abortAnalysis,
@@ -25,15 +24,6 @@ export const AnalysisControls: React.FC<AnalysisControlsProps> = ({
 }) => {
   return (
     <div className="mt-8">
-      {error && (
-        <div
-          className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg text-center"
-          role="alert"
-        >
-          {error}
-        </div>
-      )}
-
       <div className="flex gap-2 items-center">
         <Button
           onClick={onAnalyze}
@@ -42,6 +32,7 @@ export const AnalysisControls: React.FC<AnalysisControlsProps> = ({
           tabIndex={0}
           className="w-full sm:w-auto"
           disabled={loading}
+          leftIcon={Icons.play}
         >
           Analyze
         </Button>
@@ -52,6 +43,7 @@ export const AnalysisControls: React.FC<AnalysisControlsProps> = ({
             variant="outline"
             ariaLabel="Cancel analysis"
             tabIndex={0}
+            leftIcon={Icons.pause}
           >
             Cancel
           </Button>

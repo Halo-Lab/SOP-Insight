@@ -1,13 +1,15 @@
 import * as React from "react";
 import { TextArea } from "@/components/ui/TextArea";
 import { Button } from "@/components/ui/Button";
-import { SopManager } from "@/components/SopManager";
+import { SopManager } from "@/features/sop/components/SopManager";
 import {
   Dialog,
   DialogContent,
   DialogTrigger,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/Dialog";
+import { Icons } from "@/components/ui/Icons";
 
 interface SopSectionProps {
   sops: string[];
@@ -49,6 +51,7 @@ export const SopSection: React.FC<SopSectionProps> = ({
                   ariaLabel="Remove SOP"
                   onClick={() => onRemoveSop(idx)}
                   tabIndex={0}
+                  leftIcon={Icons.remove}
                 >
                   Remove
                 </Button>
@@ -58,12 +61,20 @@ export const SopSection: React.FC<SopSectionProps> = ({
                 onOpenChange={(open) => setSopDialogIdx(open ? idx : null)}
               >
                 <DialogTrigger asChild>
-                  <Button variant="outline" ariaLabel="Insert SOP" tabIndex={0}>
+                  <Button
+                    variant="outline"
+                    ariaLabel="Insert SOP"
+                    tabIndex={0}
+                    leftIcon={Icons.fileText}
+                  >
                     SOP
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogTitle className="sr-only">Select SOP</DialogTitle>
+                  <DialogDescription className="sr-only">
+                    Select a SOP from the list or create a new one
+                  </DialogDescription>
                   <SopManager
                     onSelectSop={(sopData) => {
                       onSopChange(idx, sopData);
@@ -80,8 +91,9 @@ export const SopSection: React.FC<SopSectionProps> = ({
           ariaLabel="Add SOP"
           onClick={onAddSop}
           tabIndex={0}
+          leftIcon={Icons.add}
         >
-          + Add SOP
+          Add SOP
         </Button>
       </div>
     </div>

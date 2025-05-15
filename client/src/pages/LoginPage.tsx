@@ -2,6 +2,7 @@ import * as React from "react";
 import { TextField } from "@/components/ui/TextField";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/context/AuthContext";
+import { Icons } from "@/components/ui/Icons";
 
 const validateEmail = (email: string) => /.+@.+\..+/.test(email);
 
@@ -79,9 +80,13 @@ export const LoginPage: React.FC<{ onSwitchToRegister?: () => void }> = ({
             tabIndex={0}
             aria-label={showPassword ? "Hide password" : "Show password"}
             onClick={handleTogglePassword}
-            className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 focus:outline-none"
+            className="absolute right-3 top-8.5 text-gray-500 hover:text-gray-700 focus:outline-none cursor-pointer"
           >
-            {showPassword ? "🙈" : "👁️"}
+            {showPassword ? (
+              <Icons.eyeOff size={18} />
+            ) : (
+              <Icons.eye size={18} />
+            )}
           </button>
         </div>
         {apiError && (

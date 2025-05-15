@@ -5,7 +5,8 @@ import HomePage from "@/pages/HomePage";
 import { useAuth } from "@/lib/context/AuthContext";
 import { AuthProvider } from "@/lib/context/AuthContext";
 import { EmailConfirmationPage } from "@/pages/EmailConfirmationPage";
-import { Toaster } from "@/components/sonner";
+import { Toaster } from "@/components/ui/Toast";
+import { Loader } from "@/components/ui/Loader";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -13,7 +14,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader size="lg" />
+      </div>
+    );
   }
 
   if (!user) {
@@ -27,7 +32,11 @@ const AuthRedirect: React.FC = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader size="lg" />
+      </div>
+    );
   }
 
   if (user) {

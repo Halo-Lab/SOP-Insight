@@ -1,8 +1,9 @@
 import * as React from "react";
-import Header from "@/components/Header";
-import AnalysisHistorySidebar from "@/components/AnalysisHistory";
-import HistoryToggleButton from "@/components/HistoryToggleButton";
+import AnalysisHistorySidebar from "@/features/analysis/components/AnalysisHistory";
+
 import type { AnalysisHistory } from "@/lib/services/sop.service";
+import Header from "./Header";
+import HistoryToggleButton from "./HistoryToggleButton";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -36,7 +37,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         )}
 
         <main
-          className={`flex-1 ${
+          className={`flex-1 mt-8 ${
             showHistory ? "max-w-[calc(100%-16rem)]" : "max-w-5xl mx-auto"
           } px-4 pb-10`}
         >

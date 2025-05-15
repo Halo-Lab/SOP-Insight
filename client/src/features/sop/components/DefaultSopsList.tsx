@@ -2,6 +2,7 @@ import * as React from "react";
 import { sopService } from "@/lib/services/sop.service";
 import type { DefaultSop } from "@/lib/services/sop.service";
 import { rolesService } from "@/lib/services/roles.service";
+import { Loader } from "@/components/ui/Loader";
 
 interface DefaultSopsListProps {
   roleId: number;
@@ -43,7 +44,12 @@ export const DefaultSopsList: React.FC<DefaultSopsListProps> = ({
   if (roleId === -1) return null;
 
   if (!roleId) return null;
-  if (loading) return <div className="text-center py-4">Loading SOPs...</div>;
+  if (loading)
+    return (
+      <div className="text-center py-4">
+        <Loader className="mx-auto" />
+      </div>
+    );
   if (error)
     return <div className="text-red-500 text-center py-4">{error}</div>;
   if (!sops.length)
