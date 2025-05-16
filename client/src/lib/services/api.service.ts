@@ -10,39 +10,99 @@ interface RequestOptions extends RequestInit {
   data?: unknown;
 }
 
+// Track if we're currently refreshing a token to avoid infinite loops
+let isRefreshing = false;
+
+// Function to refresh token
+export async function refreshToken(): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_URL}/auth/refresh-token`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    // If refresh token request failed, return false
+    if (!response.ok) {
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Failed to refresh token:", error);
+    return false;
+  }
+}
+
 export default async function request<T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
   const { data, ...customConfig } = options;
-  const token = localStorage.getItem("token");
 
   const headers = {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...customConfig.headers,
   };
 
   const config: RequestInit = {
     ...customConfig,
     headers,
+    credentials: "include", // This ensures cookies are sent with requests
     ...(data ? { body: JSON.stringify(data) } : {}),
   };
 
-  const response = await fetch(`${API_URL}${endpoint}`, config);
+  try {
+    const response = await fetch(`${API_URL}${endpoint}`, config);
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    console.error("Error response:", errorData);
-    throw {
-      message: errorData?.message || `HTTP error! status: ${response.status}`,
-      status: response.status,
-      originalError: errorData,
-    } as ApiError;
+    // If unauthorized and not already trying to refresh token
+    if (
+      response.status === 401 &&
+      !endpoint.includes("/auth/refresh-token") &&
+      !isRefreshing
+    ) {
+      isRefreshing = true;
+      try {
+        const refreshed = await refreshToken();
+        isRefreshing = false;
+
+        if (refreshed) {
+          // Retry the original request
+          return request<T>(endpoint, options);
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (error) {
+        isRefreshing = false;
+        // If refresh failed, continue to throw error
+      }
+
+      // If refresh failed or errored, throw error
+      throw {
+        message: "Session expired. Please log in again.",
+        status: 401,
+      } as ApiError;
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      console.error("Error response:", errorData);
+      throw {
+        message: errorData?.message || `HTTP error! status: ${response.status}`,
+        status: response.status,
+        originalError: errorData,
+      } as ApiError;
+    }
+
+    const responseData = await response.json();
+    return responseData;
+  } catch (error) {
+    if ((error as ApiError).status === 401) {
+      // Don't redirect automatically - let the AuthContext handle this
+    }
+    throw error;
   }
-
-  const responseData = await response.json();
-  return responseData;
 }
 
 export function requestStream<T>(
@@ -54,18 +114,17 @@ export function requestStream<T>(
 ): () => void {
   const controller = new AbortController();
   const { signal } = controller;
-  const token = localStorage.getItem("token");
   const { data, ...customConfig } = options;
 
   const headers = {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...customConfig.headers,
   };
 
   const config: RequestInit = {
     ...customConfig,
     headers,
+    credentials: "include", // This ensures cookies are sent with requests
     ...(data ? { body: JSON.stringify(data) } : {}),
     signal,
   };

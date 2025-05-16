@@ -127,7 +127,7 @@ export const AnalysisHistorySidebar: React.FC<AnalysisHistorySidebarProps> = ({
 
   if (loading && history.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center p-4 border-r">
+      <div className="flex justify-center p-4 pt-8">
         <div className="text-center">
           <Loader size="lg" className="mx-auto mb-2" />
           <p className="text-gray-500">Loading history...</p>
@@ -138,7 +138,7 @@ export const AnalysisHistorySidebar: React.FC<AnalysisHistorySidebarProps> = ({
 
   if (!loading && history.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center p-4 border-r">
+      <div className="flex justify-center p-4 pt-8">
         <div className="text-center">
           <p className="text-gray-500 mb-2">No analysis history found</p>
           <p className="text-sm text-gray-400">
@@ -151,8 +151,8 @@ export const AnalysisHistorySidebar: React.FC<AnalysisHistorySidebarProps> = ({
 
   return (
     <>
-      <div className="h-full overflow-auto border-r pt-8">
-        <div className="p-4 border-b">
+      <div className="overflow-auto mt-8">
+        <div className="p-4 border-b sticky top-0 bg-white z-10">
           <h2 className="text-lg font-semibold">Analysis History</h2>
         </div>
         <ul className="divide-y">

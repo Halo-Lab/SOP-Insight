@@ -22,9 +22,12 @@ export const signup = async (req, res) => {
       .from('profiles')
       .insert([{ id: data.user.id }]);
 
+    // Set cookies for tokens
+    setAuthCookies(res, data.session);
+
     res.json({
       user: data.user,
-      session: data.session
+      session: { access_token: data.session?.access_token }
     });
   } catch (error) {
     console.error('Signup error:', error);
@@ -43,7 +46,52 @@ export const login = async (req, res) => {
 
     if (error) throw error;
 
-    res.json(data);
+    // Set cookies for tokens
+    setAuthCookies(res, data.session);
+
+    res.json({
+      user: data.user,
+      session: { access_token: data.session.access_token }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const refreshToken = async (req, res) => {
+  const refreshToken = req.cookies.refresh_token;
+
+  if (!refreshToken) {
+    return res.status(401).json({ error: 'No refresh token provided' });
+  }
+
+  try {
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
+
+    if (error) throw error;
+
+    // Set new cookies
+    setAuthCookies(res, data.session);
+
+    res.json({
+      user: data.user,
+      session: { access_token: data.session.access_token }
+    });
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid refresh token' });
+  }
+};
+
+export const logout = async (req, res) => {
+  try {
+    // Clear auth cookies
+    res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
+
+    // Sign out from Supabase
+    await supabase.auth.signOut();
+
+    res.json({ message: 'Logged out successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -57,7 +105,15 @@ export const getMe = async (req, res) => {
       .select('role_id')
       .eq('id', user.id)
       .single();
-    res.json({ user: { ...user, role_id: profile?.role_id || null } });
+
+    // Include email_confirmed_at from user metadata
+    res.json({
+      user: {
+        ...user,
+        role_id: profile?.role_id || null,
+        email_confirmed: !!user.email_confirmed_at
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -82,5 +138,26 @@ export const updateUserRole = async (req, res) => {
     res.json(data[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// Helper function to set auth cookies
+const setAuthCookies = (res, session) => {
+  if (!session) return;
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 60 * 60 * 24 * 7 * 1000 // 7 days
+  };
+
+  res.cookie('access_token', session.access_token, {
+    ...cookieOptions,
+    maxAge: session.expires_in * 1000 || 3600 * 1000 // Use token expiry or default to 1 hour
+  });
+
+  if (session.refresh_token) {
+    res.cookie('refresh_token', session.refresh_token, cookieOptions);
   }
 }; 

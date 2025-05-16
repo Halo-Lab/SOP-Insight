@@ -14,7 +14,7 @@ export const HistoryToggleButton: React.FC<HistoryToggleButtonProps> = ({
   return (
     <Button
       onClick={toggleHistory}
-      className="fixed left-0 top-1/2 transform -translate-y-1/2 bg-blue-600 text-white p-2 rounded-r-md shadow-md z-10"
+      className="bg-white border border-blue-300 text-blue-600 p-2 rounded-md shadow-sm hover:bg-blue-50"
       ariaLabel={showHistory ? "Hide history" : "Show history"}
     >
       {showHistory ? (

@@ -48,12 +48,6 @@ export const registerUser = async (
   });
 };
 
-export const fetchCurrentUser = async (
-  token: string
-): Promise<FetchMeResponse> => {
-  return request<FetchMeResponse>(`/auth/me`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export const fetchCurrentUser = async (): Promise<FetchMeResponse> => {
+  return request<FetchMeResponse>(`/auth/me`);
 };

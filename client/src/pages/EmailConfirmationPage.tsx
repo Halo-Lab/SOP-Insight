@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Loader } from "@/components/ui/Loader";
+import { useAuth } from "@/lib/context/AuthContext";
+import { Icons } from "@/components/ui/Icons";
+import { toast } from "sonner";
 
 export const EmailConfirmationPage: React.FC = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -10,6 +13,7 @@ export const EmailConfirmationPage: React.FC = () => {
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
+  const { setUser } = useAuth();
 
   useEffect(() => {
     const handleEmailConfirmation = async () => {
@@ -31,50 +35,65 @@ export const EmailConfirmationPage: React.FC = () => {
             "No access token found in URL hash or query parameters"
           );
         }
-
-        localStorage.setItem("token", accessToken);
-
-        // Get user data
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/auth/me`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
+        setStatus("success");
+        setMessage(
+          "Email confirmed successfully! Redirecting to login page..."
         );
 
-        if (!response.ok) {
-          const errorData = await response
-            .json()
-            .catch(() => ({ error: "Failed to parse error response" }));
-          throw new Error(
-            errorData.error ||
-              "Failed to get user data after email confirmation"
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_API_URL}/auth/me`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+              credentials: "include",
+            }
           );
+
+          if (response.ok) {
+            const userData = await response.json();
+            // Update user in AuthContext
+            setUser(userData.user);
+
+            // If we successfully got user data, redirect to home page
+            setTimeout(() => {
+              navigate("/");
+            }, 1000);
+            return;
+          }
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error) {
+          // Log error details for debugging
+          if (error instanceof Error) {
+            console.log("Could not fetch user data:", error.message);
+          } else {
+            console.log("Could not fetch user data, redirecting to login page");
+          }
         }
 
-        // setUser in AuthContext should be called to update state.
-        // This is best done through a login function or a dedicated function in AuthContext.
-        // For now, just redirecting; AuthContext will update user on HomePage load.
-
-        setStatus("success");
-        setMessage("Email successfully confirmed! Redirecting to home page...");
-
         setTimeout(() => {
-          navigate("/");
-        }, 2500);
+          navigate("/auth");
+        }, 1000);
       } catch (error) {
         console.error("Email confirmation error:", error);
         setStatus("error");
         const errorMessage =
           error instanceof Error ? error.message : "An unknown error occurred.";
         setMessage(`Failed to confirm email: ${errorMessage}`);
+
+        // Show toast with instructions
+        toast.info(
+          "If you've already confirmed your email, please try logging in",
+          {
+            duration: 5000,
+          }
+        );
       }
     };
 
     handleEmailConfirmation();
-  }, [location, navigate]);
+  }, [location, navigate, setUser]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -90,20 +109,7 @@ export const EmailConfirmationPage: React.FC = () => {
         )}
         {status === "success" && (
           <>
-            <svg
-              className="mx-auto h-20 w-20 text-green-500 mb-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+            <Icons.check className="mx-auto h-20 w-20 text-green-500 mb-6" />
             <h2 className="text-3xl font-bold text-gray-800 mb-4">
               Email Confirmed!
             </h2>
@@ -112,21 +118,7 @@ export const EmailConfirmationPage: React.FC = () => {
         )}
         {status === "error" && (
           <>
-            <svg
-              className="mx-auto h-20 w-20 text-red-500 mb-6"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
+            <Icons.warning className="mx-auto h-20 w-20 text-red-500 mb-6" />
             <h2 className="text-3xl font-bold text-gray-800 mb-4">Oops!</h2>
             <p className="text-lg text-red-600 bg-red-100 p-4 rounded-md">
               {message}

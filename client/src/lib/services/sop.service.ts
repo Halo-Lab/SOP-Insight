@@ -131,9 +131,6 @@ export const analyzeTranscriptsStream = (
         }
       } else if (data.results) {
         onProgress(data);
-        if (data.completed) {
-          onComplete();
-        }
       }
     },
     onError,

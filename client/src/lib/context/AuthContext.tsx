@@ -2,16 +2,14 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 // Import service functions
-import {
-  loginUser,
-  registerUser,
-  fetchCurrentUser,
-} from "@/lib/services/auth.service";
+import { loginUser, registerUser } from "@/lib/services/auth.service";
+import request from "../services/api.service";
 
 interface User {
   id: string;
   email: string;
   role_id?: number | null;
+  email_confirmed?: boolean;
 }
 
 interface Session {
@@ -46,19 +44,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const navigate = useNavigate();
 
   const checkAuth = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-
     try {
-      const data = await fetchCurrentUser(token);
+      const data = await request<{ user: User }>("/auth/me");
       setUser(data.user);
     } catch (error) {
       console.error("Auth check failed:", error);
-      localStorage.removeItem("token");
       setUser(null);
     } finally {
       setLoading(false);
@@ -72,15 +62,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const login = async (email: string, password: string) => {
     try {
       const data = await loginUser(email, password);
-      if (data.session?.access_token) {
-        localStorage.setItem("token", data.session.access_token);
-        const me = await fetchCurrentUser(data.session.access_token);
-        setUser(me.user);
-        navigate("/");
-      } else {
-        console.error("Login response did not include a session token.");
-        throw new Error("Login failed: No session token received.");
-      }
+      setUser(data.user);
+      navigate("/");
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -94,12 +77,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const data = await registerUser(email, password);
 
-      if (data.session?.access_token) {
-        localStorage.setItem("token", data.session.access_token);
-        setUser(data.user);
-        navigate("/");
-      }
-
       return {
         user: data.user,
         session: data.session,
@@ -111,10 +88,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-    navigate("/auth");
+  const logout = async () => {
+    try {
+      // Call logout endpoint to clear cookies on server
+      await request("/auth/logout", { method: "POST" });
+      setUser(null);
+      navigate("/auth");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Even if server logout fails, clear local state
+      setUser(null);
+      navigate("/auth");
+    }
   };
 
   return (

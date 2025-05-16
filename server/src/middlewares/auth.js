@@ -2,8 +2,14 @@ import supabase from '../config/database.js';
 
 // Authentication middleware
 const authenticateToken = async (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  // Check for token in cookies first (preferred method)
+  let token = req.cookies?.access_token;
+
+  // Fallback to Authorization header if no cookie (for backward compatibility)
+  if (!token) {
+    const authHeader = req.headers['authorization'];
+    token = authHeader && authHeader.split(' ')[1];
+  }
 
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });

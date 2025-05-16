@@ -51,6 +51,7 @@ export const HomePage: React.FC = () => {
   );
   const [analysisProgress, setAnalysisProgress] = React.useState<number>(0);
   const [totalAnalysisCount, setTotalAnalysisCount] = React.useState<number>(0);
+  const [isSaved, setIsSaved] = React.useState<boolean>(false);
 
   const [showHistory, setShowHistory] = React.useState<boolean>(true);
   const [selectedHistory, setSelectedHistory] =
@@ -107,17 +108,16 @@ export const HomePage: React.FC = () => {
   };
 
   const handleStreamAnalyze = () => {
-    setResults([]);
     setViewingHistory(false);
     setSelectedHistory(null);
 
     if (transcripts.length === 0 || transcripts.some((t) => !t.trim())) {
-      toast.error("At least one transcript is required and cannot be empty.");
+      toast.error("Please add at least one transcript with content");
       return;
     }
 
     if (sops.length === 0 || sops.some((s) => !s.trim())) {
-      toast.error("At least one SOP is required and cannot be empty.");
+      toast.error("Please add at least one SOP with content");
       return;
     }
 
@@ -125,9 +125,10 @@ export const HomePage: React.FC = () => {
     setLoading(true);
     setStreamingAnalysis(true);
     setAnalysisProgress(0);
-
     const totalCount = sops.length * transcripts.length;
     setTotalAnalysisCount(totalCount);
+    setResults([]);
+    setIsSaved(false);
 
     const payload: AnalyzePayload = { transcripts, sops };
 
@@ -186,6 +187,7 @@ export const HomePage: React.FC = () => {
     setResults([]);
     setAnalysisProgress(0);
     setTotalAnalysisCount(0);
+    setIsSaved(false);
     toast.info("Results cleared");
   };
 
@@ -195,12 +197,18 @@ export const HomePage: React.FC = () => {
       return;
     }
 
+    if (isSaved) {
+      toast.info("This analysis has already been saved");
+      return;
+    }
+
     try {
       const currentDate = new Date();
       const name = `Analysis ${currentDate.toLocaleDateString()} ${currentDate.toLocaleTimeString()}`;
 
       await saveAnalysisHistory(name, results);
       toast.success("Analysis saved to history");
+      setIsSaved(true);
 
       // Refresh the history sidebar by triggering a state change
       setShowHistory(true);
@@ -221,6 +229,7 @@ export const HomePage: React.FC = () => {
   const handleBackToCurrentAnalysis = () => {
     setViewingHistory(false);
     setSelectedHistory(null);
+    setIsSaved(false);
   };
 
   React.useEffect(() => {
@@ -231,7 +240,9 @@ export const HomePage: React.FC = () => {
 
   React.useEffect(() => {
     if (!authLoading) {
-      setShowRoleModal(!!user && (!user.role_id || user.role_id === null));
+      setTimeout(() => {
+        setShowRoleModal(!!user && (!user.role_id || user.role_id === null));
+      }, 1500);
     }
   }, [user, authLoading]);
 
@@ -318,11 +329,10 @@ export const HomePage: React.FC = () => {
                   <div className="flex space-x-2">
                     <Button
                       onClick={handleSaveResults}
-                      variant="secondary"
-                      disabled={loading || results.length === 0}
+                      disabled={loading || results.length === 0 || isSaved}
                       leftIcon={Icons.save}
                     >
-                      Save Results
+                      {isSaved ? "Saved" : "Save Results"}
                     </Button>
                     <Button
                       onClick={handleClearResults}

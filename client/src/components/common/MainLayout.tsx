@@ -22,31 +22,48 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   onSelectHistory,
   onLogout,
 }) => {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Header onLogout={onLogout} />
+  const toggleButtonRef = React.useRef<HTMLDivElement>(null);
 
-      <div className="flex">
+  React.useEffect(() => {
+    if (toggleButtonRef.current) {
+      toggleButtonRef.current.style.left = showHistory ? "210px" : "0px";
+    }
+  }, [showHistory]);
+
+  return (
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+      <div className="flex-shrink-0 sticky top-0 z-30">
+        <Header onLogout={onLogout} />
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
         {showHistory && (
-          <div className="w-64 h-[calc(100vh-64px)] border-r">
-            <AnalysisHistorySidebar
-              onSelectHistory={onSelectHistory}
-              selectedHistoryId={selectedHistory?.id}
-            />
+          <div className="w-64 border-r-2 flex-shrink-0 overflow-hidden flex flex-col bg-white">
+            <div className="flex-1 overflow-auto">
+              <AnalysisHistorySidebar
+                onSelectHistory={onSelectHistory}
+                selectedHistoryId={selectedHistory?.id}
+              />
+            </div>
           </div>
         )}
 
         <main
-          className={`flex-1 mt-8 ${
+          className={`flex-1 overflow-auto ${
             showHistory ? "max-w-[calc(100%-16rem)]" : "max-w-5xl mx-auto"
           } px-4 pb-10`}
         >
-          <HistoryToggleButton
-            showHistory={showHistory}
-            toggleHistory={toggleHistory}
-          />
+          <div
+            ref={toggleButtonRef}
+            className="fixed top-[110px] bg-gray-50 z-20 transition-all duration-300"
+          >
+            <HistoryToggleButton
+              showHistory={showHistory}
+              toggleHistory={toggleHistory}
+            />
+          </div>
 
-          {children}
+          <div className="mt-4">{children}</div>
         </main>
       </div>
     </div>

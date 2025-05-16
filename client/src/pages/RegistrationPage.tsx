@@ -47,21 +47,17 @@ export const RegistrationPage: React.FC<{ onSwitchToLogin?: () => void }> = ({
     if (Object.keys(newErrors).length === 0) {
       setLoading(true);
       try {
-        const result = await register(email, password);
+        await register(email, password);
 
-        if (!result.session || !result.session.access_token) {
-          toast.success("Registration successful!", {
-            description:
-              "A confirmation email has been sent to your address. Please check your inbox.",
-            duration: 5000,
-          });
-          setEmail("");
-          setPassword("");
-          setConfirmPassword("");
-        } else {
-          // If session exists (auto-confirmation or already confirmed), AuthContext will redirect
-          // No specific message needed here as redirection will happen
-        }
+        toast.success("Registration successful!", {
+          description:
+            "A confirmation email has been sent to your address. Please check your inbox.",
+          duration: 5000,
+        });
+
+        setEmail("");
+        setPassword("");
+        setConfirmPassword("");
       } catch (err) {
         console.error(err);
         const errorMessage =
