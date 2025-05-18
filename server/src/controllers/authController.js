@@ -46,14 +46,34 @@ export const login = async (req, res) => {
 
     if (error) throw error;
 
+    // Check if email is confirmed
+    if (!data.user.email_confirmed_at) {
+      return res.status(403).json({
+        error: 'Email not confirmed',
+        code: 'EMAIL_NOT_CONFIRMED'
+      });
+    }
+
+    // Get user profile with role_id
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role_id')
+      .eq('id', data.user.id)
+      .single();
+
     // Set cookies for tokens
     setAuthCookies(res, data.session);
 
     res.json({
-      user: data.user,
+      user: {
+        ...data.user,
+        role_id: profile?.role_id || null,
+        email_confirmed: !!data.user.email_confirmed_at
+      },
       session: { access_token: data.session.access_token }
     });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -132,11 +152,17 @@ export const updateUserRole = async (req, res) => {
       .from('profiles')
       .update({ role_id: Number(role_id) })
       .eq('id', req.user.id)
-      .select();
+      .select('id, role_id');
 
-    if (error) throw error;
-    res.json(data[0]);
+    if (error) {
+      console.error('Error updating role:', error);
+      throw error;
+    }
+
+    // Ensure we always return a valid JSON object, even if data[0] is undefined
+    res.json({ success: true, profile: data[0] || null });
   } catch (error) {
+    console.error('Error in updateUserRole:', error);
     res.status(500).json({ error: error.message });
   }
 };

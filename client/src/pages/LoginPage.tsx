@@ -3,6 +3,7 @@ import { TextField } from "@/components/ui/TextField";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/context/AuthContext";
 import { Icons } from "@/components/ui/Icons";
+import type { ApiError } from "@/lib/services/api.service";
 
 const validateEmail = (email: string) => /.+@.+\..+/.test(email);
 
@@ -37,7 +38,12 @@ export const LoginPage: React.FC<{ onSwitchToRegister?: () => void }> = ({
         await login(email, password);
       } catch (err) {
         console.error(err);
-        setApiError("Invalid email or password");
+        const error = err as ApiError;
+        if (error.code === "EMAIL_NOT_CONFIRMED") {
+          setApiError("Please confirm your email before logging in");
+        } else {
+          setApiError(error.message || "Invalid email or password");
+        }
       } finally {
         setLoading(false);
       }

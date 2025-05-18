@@ -50,7 +50,7 @@ export const AnalysisControls: React.FC<AnalysisControlsProps> = ({
         )}
       </div>
 
-      {streamingAnalysis && totalAnalysisCount > 0 && (
+      {streamingAnalysis && totalAnalysisCount > 1 && (
         <AnalysisStatus
           current={analysisProgress}
           total={totalAnalysisCount}

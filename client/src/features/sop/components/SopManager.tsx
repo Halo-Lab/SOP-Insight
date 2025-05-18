@@ -41,6 +41,7 @@ export const SopManager: React.FC<SopManagerProps> = ({ onSelectSop }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [deleteItemId, setDeleteItemId] = React.useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = React.useState(false);
+  const [editDialogOpen, setEditDialogOpen] = React.useState(false);
 
   const loadSops = async () => {
     setLoading(true);
@@ -60,6 +61,8 @@ export const SopManager: React.FC<SopManagerProps> = ({ onSelectSop }) => {
     loadSops();
   }, []);
 
+  React.useEffect(() => {}, [isEditing]);
+
   const handleAddSubmit = async (formData: SopFormData) => {
     setFormLoading(true);
     setError(null);
@@ -76,13 +79,21 @@ export const SopManager: React.FC<SopManagerProps> = ({ onSelectSop }) => {
   };
 
   const handleEditClick = (sop: SopType) => {
+    if (!sop.id) {
+      setError("Cannot edit SOP: ID is missing");
+      return;
+    }
     setIsEditing(sop.id);
     setEditingSopData({ name: sop.name, content: sop.content });
     setIsAdding(false);
+    setEditDialogOpen(true);
   };
 
   const handleUpdateSubmit = async (formData: SopFormData) => {
-    if (isEditing === null) return;
+    if (!isEditing) {
+      setError("Cannot update SOP: ID is missing");
+      return;
+    }
     setFormLoading(true);
     setError(null);
     try {
@@ -92,6 +103,7 @@ export const SopManager: React.FC<SopManagerProps> = ({ onSelectSop }) => {
       );
       setIsEditing(null);
       setEditingSopData({ name: "", content: "" });
+      setEditDialogOpen(false);
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || "Failed to update SOP");
@@ -144,6 +156,7 @@ export const SopManager: React.FC<SopManagerProps> = ({ onSelectSop }) => {
     setIsEditing(null);
     setEditingSopData({ name: "", content: "" });
     setError(null);
+    setEditDialogOpen(false);
   };
 
   return (
@@ -188,16 +201,24 @@ export const SopManager: React.FC<SopManagerProps> = ({ onSelectSop }) => {
             />
           </DialogContent>
         </Dialog>
-        {isEditing !== null && (
-          <SopForm
-            initialData={editingSopData}
-            onSubmit={handleUpdateSubmit}
-            onCancel={cancelEditForm}
-            isLoading={formLoading}
-            formTitle="Edit SOP"
-            submitButtonText="Update SOP"
-          />
-        )}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit SOP</DialogTitle>
+              <DialogDescription>
+                Update your Standard Operating Procedure
+              </DialogDescription>
+            </DialogHeader>
+            <SopForm
+              initialData={editingSopData}
+              onSubmit={handleUpdateSubmit}
+              onCancel={cancelEditForm}
+              isLoading={formLoading}
+              formTitle=""
+              submitButtonText="Update SOP"
+            />
+          </DialogContent>
+        </Dialog>
         {loading && sops.length === 0 && (
           <div className="text-center py-4">
             <Loader className="mx-auto" />

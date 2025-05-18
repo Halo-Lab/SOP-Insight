@@ -3,6 +3,8 @@ import request from "./api.service";
 export interface ApiUser {
   id: string;
   email: string;
+  role_id?: number | null;
+  email_confirmed?: boolean;
 }
 
 export interface SupabaseSession {

@@ -25,12 +25,12 @@ export const SopForm: React.FC<SopFormProps> = ({
   const [form, setForm] = React.useState<SopFormData>(initialData);
 
   React.useEffect(() => {
-    setForm(initialData); // Sync form when initialData changes (e.g., when selecting a new SOP to edit)
+    setForm(initialData);
   }, [initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoading) return; // Prevent submission if already loading
+    if (isLoading) return;
     onSubmit(form);
   };
 

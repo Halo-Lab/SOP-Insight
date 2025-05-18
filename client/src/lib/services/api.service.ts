@@ -3,6 +3,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 export interface ApiError {
   message: string;
   status?: number;
+  code?: string;
   originalError?: unknown;
 }
 
@@ -30,8 +31,7 @@ export async function refreshToken(): Promise<boolean> {
     }
 
     return true;
-  } catch (error) {
-    console.error("Failed to refresh token:", error);
+  } catch {
     return false;
   }
 }
@@ -87,10 +87,10 @@ export default async function request<T>(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
-      console.error("Error response:", errorData);
       throw {
-        message: errorData?.message || `HTTP error! status: ${response.status}`,
+        message: errorData?.error || `HTTP error! status: ${response.status}`,
         status: response.status,
+        code: errorData?.code,
         originalError: errorData,
       } as ApiError;
     }

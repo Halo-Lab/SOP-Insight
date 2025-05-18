@@ -239,9 +239,9 @@ export const HomePage: React.FC = () => {
   }, [results]);
 
   React.useEffect(() => {
-    if (!authLoading) {
+    if (user && !authLoading && user?.role_id === null) {
       setTimeout(() => {
-        setShowRoleModal(!!user && (!user.role_id || user.role_id === null));
+        setShowRoleModal(true);
       }, 1500);
     }
   }, [user, authLoading]);
