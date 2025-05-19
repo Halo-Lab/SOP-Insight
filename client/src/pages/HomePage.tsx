@@ -159,7 +159,6 @@ export const HomePage: React.FC = () => {
               sopName: sopIndex !== -1 ? sopNames[sopIndex] : undefined,
             };
           });
-          console.log("resultsWithNames", resultsWithNames);
           setResults((prevResults) => {
             if (
               prevResults.length !== resultsWithNames.length ||

@@ -5,7 +5,6 @@ import cookieParser from 'cookie-parser';
 import { Sentry } from '../sentry.js';
 import authenticateToken from './middlewares/auth.js';
 import { specs, swaggerUi } from './config/swagger.js';
-import { corsMiddleware } from './middlewares/cors.js';
 
 // Import routes
 import authRoutes from './routes/authRoutes.js';
@@ -24,33 +23,11 @@ const app = express();
 // Setup Express error handler
 Sentry.setupExpressErrorHandler(app);
 
-// Allowed origins
-const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:3000',
-  'https://sop-insight.staging.halo-lab.team',
-  'https://sop-insight.halo-lab.team'
-];
-
-// CORS configuration
+// Middleware
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  credentials: true
 }));
-
-// Additional CORS headers middleware
-app.use(corsMiddleware);
-
 app.use(cookieParser());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
