@@ -3,7 +3,6 @@ import openai from "../config/openai.js";
 import supabase from "../config/database.js";
 import { AuthRequest, AnalyzeResult } from "../types/index.js";
 
-// Розширюємо тип Response для підтримки методу flush
 interface ResponseWithFlush extends Response {
   flush?: () => void;
 }
