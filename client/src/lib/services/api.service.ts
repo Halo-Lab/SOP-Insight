@@ -155,38 +155,32 @@ export function requestStream<T>(
         const chunk = decoder.decode(value, { stream: true });
         buffer += chunk;
 
-        const dataLines = chunk
-          .split("\n")
-          .filter((line) => line.trim().startsWith("data:"))
-          .map((line) => line.trim().substring(5).trim());
+        let processedBuffer = buffer;
+        let eventStart = processedBuffer.indexOf("data:");
 
-        for (const dataLine of dataLines) {
+        while (eventStart !== -1) {
+          const eventEnd = processedBuffer.indexOf("\n\n", eventStart);
+
+          if (eventEnd === -1) {
+            break;
+          }
+
+          const dataLine = processedBuffer
+            .substring(eventStart + 5, eventEnd)
+            .trim();
+
           try {
             const data = JSON.parse(dataLine) as T;
             onData(data);
-          } catch {
-            // Skip parsing errors
+          } catch (parseError) {
+            console.warn("Failed to parse SSE data:", parseError);
           }
+
+          processedBuffer = processedBuffer.substring(eventEnd + 2);
+          eventStart = processedBuffer.indexOf("data:");
         }
 
-        if (dataLines.length === 0) {
-          const startPos = buffer.indexOf("{");
-          const endPos = buffer.lastIndexOf("}");
-
-          if (startPos !== -1 && endPos !== -1 && endPos > startPos) {
-            const jsonCandidate = buffer.substring(startPos, endPos + 1);
-
-            try {
-              const data = JSON.parse(jsonCandidate) as T;
-              onData(data);
-              buffer = buffer.substring(endPos + 1);
-            } catch {
-              // Skip JSON parsing errors
-            }
-          }
-        } else {
-          buffer = "";
-        }
+        buffer = processedBuffer;
       }
 
       onComplete();

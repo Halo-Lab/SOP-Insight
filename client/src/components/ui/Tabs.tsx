@@ -14,6 +14,12 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, initialIndex = 0 }) => {
   const [active, setActive] = React.useState(initialIndex);
   const tabRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
 
+  React.useEffect(() => {
+    if (active >= tabs.length && tabs.length > 0) {
+      setActive(0);
+    }
+  }, [tabs, active]);
+
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLButtonElement>,
     idx: number
@@ -31,16 +37,27 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, initialIndex = 0 }) => {
     }
   };
 
+  const activeTabContent = React.useMemo(() => {
+    if (tabs.length === 0 || active >= tabs.length) {
+      return null;
+    }
+    return tabs[active].content;
+  }, [tabs, active]);
+
+  if (tabs.length === 0) {
+    return null;
+  }
+
   return (
     <div>
       <div
         role="tablist"
         aria-label="Analysis results"
-        className="flex gap-2 border-b mb-4"
+        className="flex gap-2 border-b mb-4 overflow-x-auto"
       >
         {tabs.map((tab, idx) => (
           <button
-            key={tab.label}
+            key={tab.label + "-" + idx}
             ref={(el) => {
               tabRefs.current[idx] = el;
             }}
@@ -62,18 +79,14 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, initialIndex = 0 }) => {
           </button>
         ))}
       </div>
-      {tabs.map((tab, idx) => (
-        <div
-          key={tab.label}
-          role="tabpanel"
-          id={`tabpanel-${idx}`}
-          aria-labelledby={`tab-${idx}`}
-          hidden={active !== idx}
-          className="focus:outline-none"
-        >
-          {active === idx && tab.content}
-        </div>
-      ))}
+      <div
+        role="tabpanel"
+        id={`tabpanel-${active}`}
+        aria-labelledby={`tab-${active}`}
+        className="focus:outline-none"
+      >
+        {activeTabContent}
+      </div>
     </div>
   );
 };

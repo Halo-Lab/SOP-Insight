@@ -135,26 +135,48 @@ export const HomePage: React.FC = () => {
     const abort = analyzeTranscriptsStream(
       payload,
       (data: StreamAnalysisResult) => {
+        if (!data || !data.results) {
+          console.warn("Received invalid data structure:", data);
+          return;
+        }
+
         let completedCount = 0;
         data.results.forEach((result) => {
+          if (!result || !result.analyses) {
+            console.warn("Invalid result structure:", result);
+            return;
+          }
           completedCount += result.analyses.length;
         });
 
         setAnalysisProgress(completedCount);
 
-        const resultsWithNames = data.results.map((result) => ({
-          ...result,
-          sopName: sopNames[sops.findIndex((sop) => sop === result.sop)],
-        }));
-
-        setResults((prevResults) => {
-          if (
-            JSON.stringify(prevResults) !== JSON.stringify(resultsWithNames)
-          ) {
-            return resultsWithNames;
-          }
-          return prevResults;
-        });
+        try {
+          const resultsWithNames = data.results.map((result) => {
+            const sopIndex = sops.findIndex((sop) => sop === result.sop);
+            return {
+              ...result,
+              sopName: sopIndex !== -1 ? sopNames[sopIndex] : undefined,
+            };
+          });
+          console.log("resultsWithNames", resultsWithNames);
+          setResults((prevResults) => {
+            if (
+              prevResults.length !== resultsWithNames.length ||
+              prevResults.some(
+                (pr, i) =>
+                  pr.sop !== resultsWithNames[i].sop ||
+                  pr.sopName !== resultsWithNames[i].sopName ||
+                  pr.analyses.length !== resultsWithNames[i].analyses.length
+              )
+            ) {
+              return resultsWithNames;
+            }
+            return prevResults;
+          });
+        } catch (error) {
+          console.error("Error processing analysis data:", error);
+        }
       },
       (err: Error) => {
         setLoading(false);
