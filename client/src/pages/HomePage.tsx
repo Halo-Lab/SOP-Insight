@@ -242,7 +242,7 @@ export const HomePage: React.FC = () => {
     }
   };
 
-  const handleSelectHistory = (history: AnalysisHistory) => {
+  const handleSelectHistory = (history: AnalysisHistory | null) => {
     setSelectedHistory(history);
     setViewingHistory(true);
   };

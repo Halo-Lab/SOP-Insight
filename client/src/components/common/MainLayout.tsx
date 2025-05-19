@@ -10,7 +10,7 @@ interface MainLayoutProps {
   showHistory: boolean;
   toggleHistory: () => void;
   selectedHistory?: AnalysisHistory | null;
-  onSelectHistory: (history: AnalysisHistory) => void;
+  onSelectHistory: (history: AnalysisHistory | null) => void;
   onLogout: () => void;
 }
 

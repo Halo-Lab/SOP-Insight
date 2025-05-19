@@ -23,15 +23,37 @@ export const SopForm: React.FC<SopFormProps> = ({
   formTitle,
 }) => {
   const [form, setForm] = React.useState<SopFormData>(initialData);
+  const [errors, setErrors] = React.useState<{
+    name?: string;
+    content?: string;
+  }>({});
 
   React.useEffect(() => {
     setForm(initialData);
   }, [initialData]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateForm = () => {
+    const newErrors: { name?: string; content?: string } = {};
+
+    if (!form.name.trim()) {
+      newErrors.name = "Name is required";
+    }
+
+    if (!form.content.trim()) {
+      newErrors.content = "Content is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return;
-    onSubmit(form);
+
+    if (validateForm()) {
+      await onSubmit(form);
+    }
   };
 
   return (
@@ -43,15 +65,29 @@ export const SopForm: React.FC<SopFormProps> = ({
       <TextField
         label="Name"
         value={form.name}
-        onChange={(e) => setForm({ ...form, name: e.target.value })}
+        onChange={(e) => {
+          setForm({ ...form, name: e.target.value });
+          if (errors.name) {
+            setErrors({ ...errors, name: undefined });
+          }
+        }}
         placeholder="Enter SOP name..."
+        required
+        error={errors.name}
       />
       <TextArea
         label="Content"
         value={form.content}
-        onChange={(e) => setForm({ ...form, content: e.target.value })}
+        onChange={(e) => {
+          setForm({ ...form, content: e.target.value });
+          if (errors.content) {
+            setErrors({ ...errors, content: undefined });
+          }
+        }}
         placeholder="Enter SOP content..."
         rows={4}
+        required
+        error={errors.content}
       />
       <div className="flex gap-2 justify-end">
         <Button

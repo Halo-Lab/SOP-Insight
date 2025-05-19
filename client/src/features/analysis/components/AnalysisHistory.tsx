@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface AnalysisHistorySidebarProps {
-  onSelectHistory: (history: AnalysisHistory) => void;
+  onSelectHistory: (history: AnalysisHistory | null) => void;
   selectedHistoryId?: string;
 }
 
@@ -78,6 +78,9 @@ export const AnalysisHistorySidebar: React.FC<AnalysisHistorySidebarProps> = ({
     try {
       await deleteAnalysisHistory(deleteItemId);
       toast.success("Analysis deleted successfully");
+      if (selectedHistoryId === deleteItemId) {
+        onSelectHistory(null);
+      }
       fetchHistory();
     } catch (error) {
       toast.error("Failed to delete analysis");
