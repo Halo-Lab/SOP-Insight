@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import { Sentry } from '../sentry.js';
 import authenticateToken from './middlewares/auth.js';
+import { specs, swaggerUi } from './config/swagger.js';
 
 // Import routes
 import authRoutes from './routes/authRoutes.js';
@@ -30,6 +31,9 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Swagger docs
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, { explorer: true }));
 
 // Test route
 app.get('/test', (req, res) => {

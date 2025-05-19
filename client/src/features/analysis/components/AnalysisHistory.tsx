@@ -106,6 +106,12 @@ export const AnalysisHistorySidebar: React.FC<AnalysisHistorySidebarProps> = ({
       return;
     }
 
+    const currentHistory = history.find((item) => item.id === id);
+    if (currentHistory?.name === editingName) {
+      setEditingId(null);
+      return;
+    }
+
     try {
       await updateAnalysisHistoryName(id, editingName);
       toast.success("Name updated successfully");
