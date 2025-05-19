@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 import {
   analyzeTranscripts,
   analyzeTranscriptsStream,
@@ -6,9 +6,10 @@ import {
   getAnalysisHistory,
   getAnalysisHistoryItem,
   deleteAnalysisHistory,
-  updateAnalysisHistoryName
-} from '../controllers/analyzeController.js';
-import authenticateToken from '../middlewares/auth.js';
+  updateAnalysisHistoryName,
+} from "../controllers/analyzeController.js";
+import authenticateToken from "../middlewares/auth.js";
+import { asHandler } from "../types/express.js";
 
 const router = express.Router();
 
@@ -73,7 +74,7 @@ const router = express.Router();
  *       400:
  *         description: Invalid request
  */
-router.post('/', authenticateToken, analyzeTranscripts);
+router.post("/", asHandler(authenticateToken), asHandler(analyzeTranscripts));
 
 /**
  * @swagger
@@ -111,7 +112,11 @@ router.post('/', authenticateToken, analyzeTranscripts);
  *       400:
  *         description: Invalid request
  */
-router.post('/stream', authenticateToken, analyzeTranscriptsStream);
+router.post(
+  "/stream",
+  asHandler(authenticateToken),
+  asHandler(analyzeTranscriptsStream)
+);
 
 /**
  * @swagger
@@ -184,7 +189,11 @@ router.post('/stream', authenticateToken, analyzeTranscriptsStream);
  *       401:
  *         description: Unauthorized request
  */
-router.post('/history', authenticateToken, saveAnalysisHistory);
+router.post(
+  "/history",
+  asHandler(authenticateToken),
+  asHandler(saveAnalysisHistory)
+);
 
 /**
  * @swagger
@@ -206,7 +215,11 @@ router.post('/history', authenticateToken, saveAnalysisHistory);
  *       401:
  *         description: Unauthorized request
  */
-router.get('/history', authenticateToken, getAnalysisHistory);
+router.get(
+  "/history",
+  asHandler(authenticateToken),
+  asHandler(getAnalysisHistory)
+);
 
 /**
  * @swagger
@@ -235,7 +248,11 @@ router.get('/history', authenticateToken, getAnalysisHistory);
  *       404:
  *         description: Analysis not found
  */
-router.get('/history/:id', authenticateToken, getAnalysisHistoryItem);
+router.get(
+  "/history/:id",
+  asHandler(authenticateToken),
+  asHandler(getAnalysisHistoryItem)
+);
 
 /**
  * @swagger
@@ -260,7 +277,11 @@ router.get('/history/:id', authenticateToken, getAnalysisHistoryItem);
  *       404:
  *         description: Analysis not found
  */
-router.delete('/history/:id', authenticateToken, deleteAnalysisHistory);
+router.delete(
+  "/history/:id",
+  asHandler(authenticateToken),
+  asHandler(deleteAnalysisHistory)
+);
 
 /**
  * @swagger
@@ -296,6 +317,10 @@ router.delete('/history/:id', authenticateToken, deleteAnalysisHistory);
  *       404:
  *         description: Analysis not found
  */
-router.put('/history/:id', authenticateToken, updateAnalysisHistoryName);
+router.put(
+  "/history/:id",
+  asHandler(authenticateToken),
+  asHandler(updateAnalysisHistoryName)
+);
 
-export default router; 
+export default router;

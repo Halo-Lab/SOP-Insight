@@ -1,6 +1,7 @@
-import express from 'express';
-import { getRoles } from '../controllers/roleController.js';
-import authenticateToken from '../middlewares/auth.js';
+import express from "express";
+import { getRoles } from "../controllers/roleController.js";
+import authenticateToken from "../middlewares/auth.js";
+import { asHandler } from "../types/express.js";
 
 const router = express.Router();
 
@@ -42,6 +43,6 @@ const router = express.Router();
  *       401:
  *         description: Unauthorized request
  */
-router.get('/', authenticateToken, getRoles);
+router.get("/", asHandler(authenticateToken), asHandler(getRoles));
 
-export default router; 
+export default router;

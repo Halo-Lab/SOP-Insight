@@ -1,6 +1,14 @@
-import express from 'express';
-import { signup, login, getMe, updateUserRole, refreshToken, logout } from '../controllers/authController.js';
-import authenticateToken from '../middlewares/auth.js';
+import express from "express";
+import {
+  signup,
+  login,
+  getMe,
+  updateUserRole,
+  refreshToken,
+  logout,
+} from "../controllers/authController.js";
+import authenticateToken from "../middlewares/auth.js";
+import { asHandler } from "../types/express.js";
 
 const router = express.Router();
 
@@ -30,7 +38,7 @@ const router = express.Router();
  *       400:
  *         description: Bad request
  */
-router.post('/signup', signup);
+router.post("/signup", asHandler(signup));
 
 /**
  * @swagger
@@ -58,7 +66,7 @@ router.post('/signup', signup);
  *       401:
  *         description: Unauthorized
  */
-router.post('/login', login);
+router.post("/login", asHandler(login));
 
 /**
  * @swagger
@@ -72,7 +80,7 @@ router.post('/login', login);
  *       401:
  *         description: Unauthorized
  */
-router.post('/refresh-token', refreshToken);
+router.post("/refresh-token", asHandler(refreshToken));
 
 /**
  * @swagger
@@ -84,7 +92,7 @@ router.post('/refresh-token', refreshToken);
  *       200:
  *         description: Logged out successfully
  */
-router.post('/logout', logout);
+router.post("/logout", asHandler(logout));
 
 /**
  * @swagger
@@ -100,7 +108,7 @@ router.post('/logout', logout);
  *       401:
  *         description: Unauthorized
  */
-router.get('/me', authenticateToken, getMe);
+router.get("/me", asHandler(authenticateToken), asHandler(getMe));
 
 /**
  * @swagger
@@ -130,6 +138,10 @@ router.get('/me', authenticateToken, getMe);
  *       403:
  *         description: Forbidden
  */
-router.post('/users/role', authenticateToken, updateUserRole);
+router.post(
+  "/users/role",
+  asHandler(authenticateToken),
+  asHandler(updateUserRole)
+);
 
-export default router; 
+export default router;

@@ -1,5 +1,6 @@
-import express from 'express';
-import { testSentry } from '../controllers/sentryController.js';
+import express from "express";
+import { testSentry } from "../controllers/sentryController.js";
+import { asHandler } from "../types/express.js";
 
 const router = express.Router();
 
@@ -14,6 +15,6 @@ const router = express.Router();
  *       500:
  *         description: Test error for Sentry
  */
-router.get('/test', testSentry);
+router.get("/test", asHandler(testSentry));
 
-export default router; 
+export default router;

@@ -1,6 +1,13 @@
-import express from 'express';
-import { createSop, getSops, updateSop, deleteSop, getDefaultSops } from '../controllers/sopController.js';
-import authenticateToken from '../middlewares/auth.js';
+import express from "express";
+import {
+  createSop,
+  getSops,
+  updateSop,
+  deleteSop,
+  getDefaultSops,
+} from "../controllers/sopController.js";
+import authenticateToken from "../middlewares/auth.js";
+import { asHandler } from "../types/express.js";
 
 const router = express.Router();
 
@@ -66,7 +73,7 @@ const router = express.Router();
  *       400:
  *         description: Invalid request
  */
-router.post('/', authenticateToken, createSop);
+router.post("/", asHandler(authenticateToken), asHandler(createSop));
 
 /**
  * @swagger
@@ -88,7 +95,7 @@ router.post('/', authenticateToken, createSop);
  *       401:
  *         description: Unauthorized request
  */
-router.get('/', authenticateToken, getSops);
+router.get("/", asHandler(authenticateToken), asHandler(getSops));
 
 /**
  * @swagger
@@ -124,7 +131,7 @@ router.get('/', authenticateToken, getSops);
  *       404:
  *         description: SOP document not found
  */
-router.put('/:id', authenticateToken, updateSop);
+router.put("/:id", asHandler(authenticateToken), asHandler(updateSop));
 
 /**
  * @swagger
@@ -149,7 +156,7 @@ router.put('/:id', authenticateToken, updateSop);
  *       404:
  *         description: SOP document not found
  */
-router.delete('/:id', authenticateToken, deleteSop);
+router.delete("/:id", asHandler(authenticateToken), asHandler(deleteSop));
 
 /**
  * @swagger
@@ -172,6 +179,10 @@ router.delete('/:id', authenticateToken, deleteSop);
  *       401:
  *         description: Unauthorized request
  */
-router.get('/default-sops', authenticateToken, getDefaultSops);
+router.get(
+  "/default-sops",
+  asHandler(authenticateToken),
+  asHandler(getDefaultSops)
+);
 
-export default router; 
+export default router;
