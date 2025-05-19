@@ -11,7 +11,9 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "rootDir": ".",
+    "declaration": true
   },
   "include": ["src/**/*", "sentry-init.ts", "sentry.ts"],
   "exclude": ["node_modules", "dist"]

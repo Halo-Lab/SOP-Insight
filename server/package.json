@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node --import ./dist/sentry-init.js ./dist/server.js",
     "dev": "nodemon --watch 'src/**/*.ts' --exec 'node --loader ts-node/esm --import ./sentry-init.ts ./src/server.ts'",
-    "build": "tsc && cp .env ./dist/.env 2>/dev/null || :",
+    "build": "tsc && cp .env ./dist/.env 2>/dev/null || : && cp sentry-init.ts ./dist/sentry-init.ts 2>/dev/null || : && cp sentry.ts ./dist/sentry.ts 2>/dev/null || :",
     "postinstall": "npm run build"
   },
   "keywords": [],
