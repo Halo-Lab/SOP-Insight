@@ -51,8 +51,6 @@ export const HomePage: React.FC = () => {
   );
   const [analysisProgress, setAnalysisProgress] = React.useState<number>(0);
   const [totalAnalysisCount, setTotalAnalysisCount] = React.useState<number>(0);
-  const [isSaved, setIsSaved] = React.useState<boolean>(false);
-
   const [showHistory, setShowHistory] = React.useState<boolean>(true);
   const [selectedHistory, setSelectedHistory] =
     React.useState<AnalysisHistory | null>(null);
@@ -128,7 +126,6 @@ export const HomePage: React.FC = () => {
     const totalCount = sops.length * transcripts.length;
     setTotalAnalysisCount(totalCount);
     setResults([]);
-    setIsSaved(false);
 
     const payload: AnalyzePayload = { transcripts, sops };
 
@@ -187,7 +184,23 @@ export const HomePage: React.FC = () => {
         setLoading(false);
         setStreamingAnalysis(false);
         setAbortAnalysis(null);
-        toast.success("Analysis completed successfully!");
+
+        // Automatically save results after analysis completion
+        const currentDate = new Date();
+        const name = `Analysis ${currentDate.toLocaleDateString()} ${currentDate.toLocaleTimeString()}`;
+
+        saveAnalysisHistory(name, results)
+          .then(() => {
+            toast.success("Analysis completed and saved successfully!");
+            // Refresh the history sidebar
+            setShowHistory(true);
+            const event = new CustomEvent("refreshAnalysisHistory");
+            window.dispatchEvent(event);
+          })
+          .catch((error) => {
+            console.error("Failed to save analysis:", error);
+            toast.error("Analysis completed but failed to save results");
+          });
       }
     );
 
@@ -208,38 +221,7 @@ export const HomePage: React.FC = () => {
     setResults([]);
     setAnalysisProgress(0);
     setTotalAnalysisCount(0);
-    setIsSaved(false);
     toast.info("Results cleared");
-  };
-
-  const handleSaveResults = async () => {
-    if (results.length === 0) {
-      toast.error("No results to save");
-      return;
-    }
-
-    if (isSaved) {
-      toast.info("This analysis has already been saved");
-      return;
-    }
-
-    try {
-      const currentDate = new Date();
-      const name = `Analysis ${currentDate.toLocaleDateString()} ${currentDate.toLocaleTimeString()}`;
-
-      await saveAnalysisHistory(name, results);
-      toast.success("Analysis saved to history");
-      setIsSaved(true);
-
-      // Refresh the history sidebar by triggering a state change
-      setShowHistory(true);
-      // Force the AnalysisHistorySidebar to refresh its data
-      const event = new CustomEvent("refreshAnalysisHistory");
-      window.dispatchEvent(event);
-    } catch (error) {
-      toast.error("Failed to save analysis");
-      console.error(error);
-    }
   };
 
   const handleSelectHistory = (history: AnalysisHistory | null) => {
@@ -250,7 +232,6 @@ export const HomePage: React.FC = () => {
   const handleBackToCurrentAnalysis = () => {
     setViewingHistory(false);
     setSelectedHistory(null);
-    setIsSaved(false);
   };
 
   React.useEffect(() => {
@@ -348,13 +329,6 @@ export const HomePage: React.FC = () => {
                     {streamingAnalysis && !loading ? "(Live)" : ""}
                   </h2>
                   <div className="flex space-x-2">
-                    <Button
-                      onClick={handleSaveResults}
-                      disabled={loading || results.length === 0 || isSaved}
-                      leftIcon={Icons.save}
-                    >
-                      {isSaved ? "Saved" : "Save Results"}
-                    </Button>
                     <Button
                       onClick={handleClearResults}
                       variant="outline"
