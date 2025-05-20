@@ -13,6 +13,7 @@ type TextAreaProps = {
   ariaLabel?: string;
   tabIndex?: number;
   onKeyDown?: React.KeyboardEventHandler<HTMLTextAreaElement>;
+  disabled?: boolean;
 };
 
 export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
@@ -29,6 +30,7 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
       ariaLabel,
       tabIndex = 0,
       onKeyDown,
+      disabled = false,
       ...props
     },
     ref
@@ -57,9 +59,11 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
           aria-required={required}
           tabIndex={tabIndex}
           onKeyDown={onKeyDown}
+          disabled={disabled}
           className={cn(
             "px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors resize-none",
-            error ? "border-red-500" : "border-gray-300"
+            error ? "border-red-500" : "border-gray-300",
+            disabled && "bg-gray-100 cursor-not-allowed opacity-70"
           )}
           {...props}
         />

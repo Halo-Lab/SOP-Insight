@@ -17,6 +17,8 @@ export interface AnalysisHistory {
   results: string | SopAnalysisResult[];
   user_id: string;
   created_at: string;
+  is_complete: boolean;
+  last_processed_index?: string;
 }
 
 export interface SopFormData {
@@ -54,11 +56,18 @@ export interface StreamAnalysisResult {
       tokens: number;
     }>;
   }>;
+  lastProcessedIndex?: {
+    sopIndex: number;
+    transcriptIndex: number;
+  };
+  historyId?: string;
 }
 
 export interface AnalyzePayload {
   transcripts: string[];
-  sops: string[]; // Assuming sops are passed as content strings for analysis
+  sops: string[];
+  startFrom?: { sopIndex: number; transcriptIndex: number };
+  history_id?: string;
 }
 
 export interface DefaultSop {
@@ -115,19 +124,44 @@ export const analyzeTranscriptsStream = (
   payload: AnalyzePayload,
   onProgress: (data: StreamAnalysisResult) => void,
   onError: (error: Error) => void,
-  onComplete: () => void
+  onComplete: () => void,
+  startFrom?: { sopIndex: number; transcriptIndex: number },
+  historyId?: string
 ): (() => void) => {
+  const requestPayload = {
+    ...payload,
+    startFrom,
+    history_id: historyId,
+  };
+
   return requestStream<StreamAnalysisResult>(
     "/analyze/stream",
     {
       method: "POST",
-      data: payload,
+      data: requestPayload,
     },
     (data) => {
       if (data.error) {
-        onError(new Error(data.error));
+        if (data.historyId) {
+          const enhancedError = new Error(data.error) as Error & {
+            historyId: string;
+            lastProcessedIndex?: {
+              sopIndex: number;
+              transcriptIndex: number;
+            };
+          };
+          enhancedError.historyId = data.historyId;
+          enhancedError.lastProcessedIndex = data.lastProcessedIndex;
+          onError(enhancedError);
+        } else {
+          onError(new Error(data.error));
+        }
+
         if (data.partialResults) {
-          onProgress({ results: data.partialResults });
+          onProgress({
+            results: data.partialResults,
+            lastProcessedIndex: data.lastProcessedIndex,
+          });
         }
       } else if (data.results) {
         onProgress(data);
@@ -141,11 +175,12 @@ export const analyzeTranscriptsStream = (
 // History API functions
 export const saveAnalysisHistory = async (
   name: string,
-  results: SopAnalysisResult[]
+  results: SopAnalysisResult[],
+  is_complete: boolean = true
 ): Promise<AnalysisHistory> => {
   return request<AnalysisHistory>("/analyze/history", {
     method: "POST",
-    body: JSON.stringify({ name, results }),
+    body: JSON.stringify({ name, results, is_complete }),
   });
 };
 
@@ -177,6 +212,16 @@ export const updateAnalysisHistoryName = async (
   });
 };
 
+export const updateAnalysisHistoryStatus = async (
+  id: string,
+  is_complete: boolean
+): Promise<AnalysisHistory> => {
+  return request<AnalysisHistory>(`/analyze/history/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ is_complete }),
+  });
+};
+
 export const sopService = {
   async getDefaultSopsByRole(roleId: number): Promise<DefaultSop[]> {
     try {
@@ -189,4 +234,71 @@ export const sopService = {
       throw error;
     }
   },
+};
+
+export const continueAnalysisFromHistory = (
+  historyId: string,
+  transcripts: string[],
+  sops: string[],
+  onProgress: (data: StreamAnalysisResult) => void,
+  onError: (error: Error) => void,
+  onComplete: () => void
+): (() => void) => {
+  const abortRef = { current: () => {} };
+
+  getAnalysisHistoryItem(historyId)
+    .then((history) => {
+      let lastProcessedIndex:
+        | { sopIndex: number; transcriptIndex: number }
+        | undefined;
+
+      if (history.last_processed_index) {
+        try {
+          lastProcessedIndex = JSON.parse(
+            history.last_processed_index as string
+          );
+        } catch (error) {
+          console.error("Error parsing last_processed_index:", error);
+        }
+      }
+
+      if (lastProcessedIndex) {
+        const nextIndex = { ...lastProcessedIndex };
+
+        nextIndex.transcriptIndex += 1;
+
+        if (nextIndex.transcriptIndex >= transcripts.length) {
+          nextIndex.sopIndex += 1;
+          nextIndex.transcriptIndex = 0;
+        }
+
+        if (nextIndex.sopIndex >= sops.length) {
+          onComplete();
+          return;
+        }
+
+        abortRef.current = analyzeTranscriptsStream(
+          { transcripts, sops },
+          onProgress,
+          onError,
+          onComplete,
+          nextIndex,
+          historyId
+        );
+      } else {
+        abortRef.current = analyzeTranscriptsStream(
+          { transcripts, sops },
+          onProgress,
+          onError,
+          onComplete,
+          undefined,
+          historyId
+        );
+      }
+    })
+    .catch((error) => {
+      onError(error);
+    });
+
+  return () => abortRef.current();
 };

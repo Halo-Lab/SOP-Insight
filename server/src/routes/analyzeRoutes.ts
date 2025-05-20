@@ -7,6 +7,7 @@ import {
   getAnalysisHistoryItem,
   deleteAnalysisHistory,
   updateAnalysisHistoryName,
+  updateAnalysisHistoryIsComplete,
 } from "../controllers/analyzeController.js";
 import authenticateToken from "../middlewares/auth.js";
 import { asHandler } from "../types/express.js";
@@ -80,7 +81,7 @@ router.post("/", asHandler(authenticateToken), asHandler(analyzeTranscripts));
  * @swagger
  * /analyze/stream:
  *   post:
- *     summary: Analyze transcripts with stream response
+ *     summary: Analyze transcripts with streaming response
  *     tags: [Analyze]
  *     security:
  *       - bearerAuth: []
@@ -104,9 +105,22 @@ router.post("/", asHandler(authenticateToken), asHandler(analyzeTranscripts));
  *                 items:
  *                   type: string
  *                 description: Array of SOP content strings for analysis
+ *               startFrom:
+ *                 type: object
+ *                 properties:
+ *                   sopIndex:
+ *                     type: integer
+ *                     description: Index of SOP to start from
+ *                   transcriptIndex:
+ *                     type: integer
+ *                     description: Index of transcript to start from
+ *                 description: Optional starting point for resuming analysis
+ *               history_id:
+ *                 type: string
+ *                 description: Optional ID of existing analysis history to update
  *     responses:
  *       200:
- *         description: Analysis completed successfully (stream response)
+ *         description: Stream of analysis results
  *       401:
  *         description: Unauthorized request
  *       400:
@@ -321,6 +335,47 @@ router.put(
   "/history/:id",
   asHandler(authenticateToken),
   asHandler(updateAnalysisHistoryName)
+);
+
+/**
+ * @swagger
+ * /analyze/history/{id}/status:
+ *   patch:
+ *     summary: Update analysis completion status
+ *     tags: [Analyze]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the analysis history to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - is_complete
+ *             properties:
+ *               is_complete:
+ *                 type: boolean
+ *                 description: Completion status of the analysis
+ *     responses:
+ *       200:
+ *         description: Analysis status updated successfully
+ *       401:
+ *         description: Unauthorized request
+ *       404:
+ *         description: Analysis history not found
+ */
+router.patch(
+  "/history/:id/status",
+  asHandler(authenticateToken),
+  asHandler(updateAnalysisHistoryIsComplete)
 );
 
 export default router;
