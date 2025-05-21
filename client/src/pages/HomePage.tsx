@@ -52,9 +52,6 @@ export const HomePage: React.FC = () => {
   const resultsHeaderRef = React.useRef<HTMLHeadingElement>(null);
   const [showRoleModal, setShowRoleModal] = React.useState(false);
   const [streamingAnalysis, setStreamingAnalysis] = React.useState(false);
-  const [abortAnalysis, setAbortAnalysis] = React.useState<(() => void) | null>(
-    null
-  );
   const [analysisProgress, setAnalysisProgress] = React.useState<number>(0);
   const [totalAnalysisCount, setTotalAnalysisCount] = React.useState<number>(0);
   const [showHistory, setShowHistory] = React.useState<boolean>(true);
@@ -190,7 +187,7 @@ export const HomePage: React.FC = () => {
       sops,
     };
 
-    const abort = analyzeTranscriptsStream(
+    analyzeTranscriptsStream(
       payload,
       (data: StreamAnalysisResult) => {
         if (!data || !data.results) {
@@ -226,7 +223,6 @@ export const HomePage: React.FC = () => {
       (err: Error) => {
         setLoading(false);
         setStreamingAnalysis(false);
-        setAbortAnalysis(null);
 
         // Set the flag indicating analysis was interrupted
         analysisInterruptedRef.current = true;
@@ -288,13 +284,16 @@ export const HomePage: React.FC = () => {
               toast.error("Failed to save partial analysis results");
             });
         } else {
-          toast.error(err.message || "Analysis stream failed.");
+          setErrorState({
+            error: err,
+            lastProcessedIndex: { sopIndex: 0, transcriptIndex: 0 },
+          });
+          toast.error(`Analysis paused: ${err.message || "Unknown error"}`);
         }
       },
       () => {
         setLoading(false);
         setStreamingAnalysis(false);
-        setAbortAnalysis(null);
 
         // Only show completion toast if analysis wasn't interrupted
         if (!analysisInterruptedRef.current) {
@@ -345,18 +344,6 @@ export const HomePage: React.FC = () => {
       startFrom,
       errorState.historyId
     );
-
-    setAbortAnalysis(() => abort);
-  };
-
-  const handleCancelAnalysis = () => {
-    if (abortAnalysis) {
-      abortAnalysis();
-      setAbortAnalysis(null);
-      setLoading(false);
-      setStreamingAnalysis(false);
-      toast.info("Analysis cancelled");
-    }
   };
 
   const handleClearResults = () => {
@@ -377,10 +364,12 @@ export const HomePage: React.FC = () => {
   };
 
   React.useEffect(() => {
-    if (results.length > 0 && resultsHeaderRef.current) {
+    const hasResults = results.length > 0;
+    // Scroll only when results first appear
+    if (hasResults && resultsHeaderRef.current) {
       resultsHeaderRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [results]);
+  }, [results.length > 0]);
 
   React.useEffect(() => {
     if (user && !authLoading && user?.role_id === null) {
@@ -490,16 +479,6 @@ export const HomePage: React.FC = () => {
               >
                 {streamingAnalysis ? "Analyzing..." : "Analyze"}
               </Button>
-
-              {streamingAnalysis && (
-                <Button
-                  onClick={handleCancelAnalysis}
-                  variant="outline"
-                  className="text-red-600 border-red-300 hover:border-red-600"
-                >
-                  Cancel
-                </Button>
-              )}
 
               {errorState.error && errorState.lastProcessedIndex && (
                 <Button

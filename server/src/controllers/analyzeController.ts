@@ -197,14 +197,6 @@ export const analyzeTranscriptsStream = async (
         const prompt = `Analyze the following call transcript according to this SOP.\n\nSOP:\n${sop}\n\nTranscript:\n${transcript}`;
 
         try {
-          // TESTING ONLY: Remove this error after testing the error handling functionality
-          // Only throw error when not resuming (startFrom is not set)
-          if ((transcriptIndex === 1 || sopIndex === 1) && !startFrom) {
-            throw new Error(
-              "Test error: Simulated failure during analysis for testing purposes"
-            );
-          }
-
           const completion = await openai.chat.completions.create({
             model: "gpt-4.1-mini",
             messages: [

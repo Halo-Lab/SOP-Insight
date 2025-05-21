@@ -127,14 +127,14 @@ export const analyzeTranscriptsStream = (
   onComplete: () => void,
   startFrom?: { sopIndex: number; transcriptIndex: number },
   historyId?: string
-): (() => void) => {
+): void => {
   const requestPayload = {
     ...payload,
     startFrom,
     history_id: historyId,
   };
 
-  return requestStream<StreamAnalysisResult>(
+  requestStream<StreamAnalysisResult>(
     "/analyze/stream",
     {
       method: "POST",
@@ -243,9 +243,7 @@ export const continueAnalysisFromHistory = (
   onProgress: (data: StreamAnalysisResult) => void,
   onError: (error: Error) => void,
   onComplete: () => void
-): (() => void) => {
-  const abortRef = { current: () => {} };
-
+): void => {
   getAnalysisHistoryItem(historyId)
     .then((history) => {
       let lastProcessedIndex:
@@ -277,7 +275,7 @@ export const continueAnalysisFromHistory = (
           return;
         }
 
-        abortRef.current = analyzeTranscriptsStream(
+        analyzeTranscriptsStream(
           { transcripts, sops },
           onProgress,
           onError,
@@ -286,7 +284,7 @@ export const continueAnalysisFromHistory = (
           historyId
         );
       } else {
-        abortRef.current = analyzeTranscriptsStream(
+        analyzeTranscriptsStream(
           { transcripts, sops },
           onProgress,
           onError,
@@ -299,6 +297,4 @@ export const continueAnalysisFromHistory = (
     .catch((error) => {
       onError(error);
     });
-
-  return () => abortRef.current();
 };

@@ -111,9 +111,7 @@ export function requestStream<T>(
   onData: (data: T) => void,
   onError: (error: Error) => void,
   onComplete: () => void
-): () => void {
-  const controller = new AbortController();
-  const { signal } = controller;
+): void {
   const { data, ...customConfig } = options;
 
   const headers = {
@@ -126,7 +124,6 @@ export function requestStream<T>(
     headers,
     credentials: "include", // This ensures cookies are sent with requests
     ...(data ? { body: JSON.stringify(data) } : {}),
-    signal,
   };
 
   (async () => {
@@ -185,7 +182,7 @@ export function requestStream<T>(
 
       onComplete();
     } catch (error: unknown) {
-      if (error instanceof Error && error.name !== "AbortError") {
+      if (error instanceof Error) {
         onError(error);
       } else if (!(error instanceof Error)) {
         const genericError = new Error(String(error));
@@ -193,6 +190,4 @@ export function requestStream<T>(
       }
     }
   })();
-
-  return () => controller.abort();
 }
